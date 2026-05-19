@@ -1,0 +1,63 @@
+services:
+  cloudcomputing-oracle-db:
+    image: gvenzl/oracle-xe:21-slim
+    container_name: cloudcomputing-oracle
+    restart: unless-stopped
+
+    environment:
+      ORACLE_PASSWORD: CloudRoot123
+      APP_USER: CLOUD
+      APP_USER_PASSWORD: Cloud123
+
+    ports:
+      - "1521:1521"
+
+    volumes:
+      - cloudcomputing-oracle-data:/opt/oracle/oradata
+
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 30
+      start_period: 180s
+
+    networks:
+      - cloudcomputing-network
+
+
+  cloudcomputing-api:
+    image: cloudcomputing-api:latest
+
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: cloudcomputing-api
+    restart: unless-stopped
+
+    depends_on:
+      cloudcomputing-oracle-db:
+        condition: service_healthy
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__OracleConnection: User Id=CLOUD;Password=Cloud123;Data Source=cloudcomputing-oracle-db:1521/XEPDB1;
+
+    ports:
+      - "8081:8080"
+
+    networks:
+      - cloudcomputing-network
+
+
+volumes:
+  cloudcomputing-oracle-data:
+    name: cloudcomputing-oracle-data
+
+
+networks:
+  cloudcomputing-network:
+    name: cloudcomputing-network
+    driver: bridge

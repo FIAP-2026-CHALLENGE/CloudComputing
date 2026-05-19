@@ -1,0 +1,75 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\Matt\\Documents\\estudos\\DotNet\\DotNet.Api\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{CFEA0AE7-59AD-8F17-7FF6-BBD7160E3D6D}|DotNet.Api.csproj|c:\\users\\matt\\documents\\estudos\\dotnet\\dotnet.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CFEA0AE7-59AD-8F17-7FF6-BBD7160E3D6D}|DotNet.Api.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CFEA0AE7-59AD-8F17-7FF6-BBD7160E3D6D}|DotNet.Api.csproj|c:\\users\\matt\\documents\\estudos\\dotnet\\dotnet.api\\controllers\\tutorscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CFEA0AE7-59AD-8F17-7FF6-BBD7160E3D6D}|DotNet.Api.csproj|solutionrelative:controllers\\tutorscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CFEA0AE7-59AD-8F17-7FF6-BBD7160E3D6D}|DotNet.Api.csproj|c:\\users\\matt\\documents\\estudos\\dotnet\\dotnet.api\\models\\tutor.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CFEA0AE7-59AD-8F17-7FF6-BBD7160E3D6D}|DotNet.Api.csproj|solutionrelative:models\\tutor.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 2,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "TutorsController.cs",
+              "DocumentMoniker": "C:\\Users\\Matt\\Documents\\estudos\\DotNet\\DotNet.Api\\Controllers\\TutorsController.cs",
+              "RelativeDocumentMoniker": "Controllers\\TutorsController.cs",
+              "ToolTip": "C:\\Users\\Matt\\Documents\\estudos\\DotNet\\DotNet.Api\\Controllers\\TutorsController.cs",
+              "RelativeToolTip": "Controllers\\TutorsController.cs",
+              "ViewState": "AgIAAFgAAAAAAAAAAAAgwHoAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-16T05:03:30.661Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "Tutor.cs",
+              "DocumentMoniker": "C:\\Users\\Matt\\Documents\\estudos\\DotNet\\DotNet.Api\\Models\\Tutor.cs",
+              "RelativeDocumentMoniker": "Models\\Tutor.cs",
+              "ToolTip": "C:\\Users\\Matt\\Documents\\estudos\\DotNet\\DotNet.Api\\Models\\Tutor.cs",
+              "RelativeToolTip": "Models\\Tutor.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-16T00:59:34.206Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\Matt\\Documents\\estudos\\DotNet\\DotNet.Api\\Program.cs",
+              "RelativeDocumentMoniker": "Program.cs",
+              "ToolTip": "C:\\Users\\Matt\\Documents\\estudos\\DotNet\\DotNet.Api\\Program.cs",
+              "RelativeToolTip": "Program.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAAhAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-16T00:57:37.3Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{cce594b6-0c39-4442-ba28-10c64ac7e89f}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
