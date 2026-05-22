@@ -11,28 +11,28 @@ namespace DotNet.Api.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateIndex(
-                name: "IX_T_CP_PETS_TUTOR_ID",
-                table: "T_CP_PETS",
-                column: "TUTOR_ID");
+                name: "IX_T_CP_ANIMAIS_RESPONSAVEL_ID",
+                table: "T_CP_ANIMAIS",
+                column: "RESPONSAVEL_ID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_T_CP_CARE_EVENTS_PET_ID",
                 table: "T_CP_CARE_EVENTS",
-                column: "PET_ID");
+                column: "ANIMAL_ID");
 
             migrationBuilder.AddForeignKey(
-                name: "FK_T_CP_CARE_EVENTS_T_CP_PETS_PET_ID",
+                name: "FK_T_CP_CARE_EVENTS_T_CP_ANIMAIS_PET_ID",
                 table: "T_CP_CARE_EVENTS",
-                column: "PET_ID",
-                principalTable: "T_CP_PETS",
+                column: "ANIMAL_ID",
+                principalTable: "T_CP_ANIMAIS",
                 principalColumn: "ID",
                 onDelete: ReferentialAction.Restrict);
 
             migrationBuilder.AddForeignKey(
-                name: "FK_T_CP_PETS_T_CP_TUTORS_TUTOR_ID",
-                table: "T_CP_PETS",
-                column: "TUTOR_ID",
-                principalTable: "T_CP_TUTORS",
+                name: "FK_T_CP_ANIMAIS_T_CP_RESPONSAVEIS_RESPONSAVEL_ID",
+                table: "T_CP_ANIMAIS",
+                column: "RESPONSAVEL_ID",
+                principalTable: "T_CP_RESPONSAVEIS",
                 principalColumn: "ID",
                 onDelete: ReferentialAction.Restrict);
         }
@@ -41,16 +41,16 @@ namespace DotNet.Api.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropForeignKey(
-                name: "FK_T_CP_CARE_EVENTS_T_CP_PETS_PET_ID",
+                name: "FK_T_CP_CARE_EVENTS_T_CP_ANIMAIS_PET_ID",
                 table: "T_CP_CARE_EVENTS");
 
             migrationBuilder.DropForeignKey(
-                name: "FK_T_CP_PETS_T_CP_TUTORS_TUTOR_ID",
-                table: "T_CP_PETS");
+                name: "FK_T_CP_ANIMAIS_T_CP_RESPONSAVEIS_RESPONSAVEL_ID",
+                table: "T_CP_ANIMAIS");
 
             migrationBuilder.DropIndex(
-                name: "IX_T_CP_PETS_TUTOR_ID",
-                table: "T_CP_PETS");
+                name: "IX_T_CP_ANIMAIS_RESPONSAVEL_ID",
+                table: "T_CP_ANIMAIS");
 
             migrationBuilder.DropIndex(
                 name: "IX_T_CP_CARE_EVENTS_PET_ID",

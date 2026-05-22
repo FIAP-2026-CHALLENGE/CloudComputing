@@ -4,7 +4,7 @@ public class CareEvent
 {
     public int Id { get; set; }
 
-    public int PetId { get; set; }
+    public int AnimalId { get; set; }
 
     public string Type { get; set; } = string.Empty;
 

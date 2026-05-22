@@ -17,7 +17,7 @@ namespace DotNet.Api.Migrations
                 {
                     ID = table.Column<int>(type: "NUMBER(10)", nullable: false)
                         .Annotation("Oracle:Identity", "START WITH 1 INCREMENT BY 1"),
-                    PET_ID = table.Column<int>(type: "NUMBER(10)", nullable: false),
+                    ANIMAL_ID = table.Column<int>(type: "NUMBER(10)", nullable: false),
                     TYPE = table.Column<string>(type: "NVARCHAR2(40)", maxLength: 40, nullable: false),
                     TITLE = table.Column<string>(type: "NVARCHAR2(160)", maxLength: 160, nullable: false),
                     DESCRIPTION = table.Column<string>(type: "NVARCHAR2(500)", maxLength: 500, nullable: false),
@@ -35,12 +35,12 @@ namespace DotNet.Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "T_CP_PETS",
+                name: "T_CP_ANIMAIS",
                 columns: table => new
                 {
                     ID = table.Column<int>(type: "NUMBER(10)", nullable: false)
                         .Annotation("Oracle:Identity", "START WITH 1 INCREMENT BY 1"),
-                    TUTOR_ID = table.Column<int>(type: "NUMBER(10)", nullable: false),
+                    RESPONSAVEL_ID = table.Column<int>(type: "NUMBER(10)", nullable: false),
                     NAME = table.Column<string>(type: "NVARCHAR2(120)", maxLength: 120, nullable: false),
                     NICKNAME = table.Column<string>(type: "NVARCHAR2(120)", maxLength: 120, nullable: false),
                     SPECIES = table.Column<string>(type: "NVARCHAR2(30)", maxLength: 30, nullable: false),
@@ -54,11 +54,11 @@ namespace DotNet.Api.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_T_CP_PETS", x => x.ID);
+                    table.PrimaryKey("PK_T_CP_ANIMAIS", x => x.ID);
                 });
 
             migrationBuilder.CreateTable(
-                name: "T_CP_TUTORS",
+                name: "T_CP_RESPONSAVEIS",
                 columns: table => new
                 {
                     ID = table.Column<int>(type: "NUMBER(10)", nullable: false)
@@ -72,7 +72,7 @@ namespace DotNet.Api.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_T_CP_TUTORS", x => x.ID);
+                    table.PrimaryKey("PK_T_CP_RESPONSAVEIS", x => x.ID);
                 });
         }
 
@@ -83,10 +83,10 @@ namespace DotNet.Api.Migrations
                 name: "T_CP_CARE_EVENTS");
 
             migrationBuilder.DropTable(
-                name: "T_CP_PETS");
+                name: "T_CP_ANIMAIS");
 
             migrationBuilder.DropTable(
-                name: "T_CP_TUTORS");
+                name: "T_CP_RESPONSAVEIS");
         }
     }
 }

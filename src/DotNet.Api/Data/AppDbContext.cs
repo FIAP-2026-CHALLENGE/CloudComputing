@@ -10,9 +10,9 @@ public class AppDbContext : DbContext
     {
     }
 
-    public DbSet<Tutor> Tutors => Set<Tutor>();
+    public DbSet<Responsavel> Responsaveis => Set<Responsavel>();
 
-    public DbSet<Pet> Pets => Set<Pet>();
+    public DbSet<Animal> Animais => Set<Animal>();
 
     public DbSet<CareEvent> CareEvents => Set<CareEvent>();
 
@@ -20,9 +20,9 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<Tutor>(entity =>
+        modelBuilder.Entity<Responsavel>(entity =>
         {
-            entity.ToTable("T_CP_TUTORS");
+            entity.ToTable("T_CP_RESPONSAVEIS");
 
             entity.HasKey(t => t.Id);
 
@@ -60,17 +60,17 @@ public class AppDbContext : DbContext
                 .IsRequired();
         });
 
-        modelBuilder.Entity<Pet>(entity =>
+        modelBuilder.Entity<Animal>(entity =>
         {
-            entity.ToTable("T_CP_PETS");
+            entity.ToTable("T_CP_ANIMAIS");
 
             entity.HasKey(p => p.Id);
 
             entity.Property(p => p.Id)
                 .HasColumnName("ID");
 
-            entity.Property(p => p.TutorId)
-                .HasColumnName("TUTOR_ID")
+            entity.Property(p => p.ResponsavelId)
+                .HasColumnName("RESPONSAVEL_ID")
                 .IsRequired();
 
             entity.Property(p => p.Name)
@@ -120,10 +120,10 @@ public class AppDbContext : DbContext
                 .HasConversion<int>()
                 .IsRequired();
 
-            // FK: Pet → Tutor
-            entity.HasOne<Tutor>()
+            // FK: Animal → Responsavel
+            entity.HasOne<Responsavel>()
                 .WithMany()
-                .HasForeignKey(p => p.TutorId)
+                .HasForeignKey(p => p.ResponsavelId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -136,8 +136,8 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Id)
                 .HasColumnName("ID");
 
-            entity.Property(e => e.PetId)
-                .HasColumnName("PET_ID")
+            entity.Property(e => e.AnimalId)
+                .HasColumnName("ANIMAL_ID")
                 .IsRequired();
 
             entity.Property(e => e.Type)
@@ -185,11 +185,102 @@ public class AppDbContext : DbContext
                 .HasConversion<int>()
                 .IsRequired();
 
-            // FK: CareEvent → Pet
-            entity.HasOne<Pet>()
+            // FK: CareEvent → Animal
+            entity.HasOne<Animal>()
                 .WithMany()
-                .HasForeignKey(e => e.PetId)
+                .HasForeignKey(e => e.AnimalId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
+
+        // ── Seed Data ────────────────────────────────────────────────────────
+
+        modelBuilder.Entity<Responsavel>().HasData(
+            new Responsavel
+            {
+                Id        = 1,
+                Name      = "Ana Paula Souza",
+                Email     = "ana.souza@email.com",
+                Phone     = "(11) 91234-5678",
+                Cpf       = "123.456.789-00",
+                CreatedAt = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                IsActive  = true
+            },
+            new Responsavel
+            {
+                Id        = 2,
+                Name      = "Carlos Eduardo Lima",
+                Email     = "carlos.lima@email.com",
+                Phone     = "(21) 99876-5432",
+                Cpf       = "987.654.321-00",
+                CreatedAt = new DateTime(2025, 2, 15, 0, 0, 0, DateTimeKind.Utc),
+                IsActive  = true
+            }
+        );
+
+        modelBuilder.Entity<Animal>().HasData(
+            new Animal
+            {
+                Id        = 1,
+                ResponsavelId   = 1,
+                Name      = "Bolinha",
+                Nickname  = "Boli",
+                Species   = "DOG",
+                Breed     = "Labrador",
+                BirthDate = new DateTime(2020, 5, 20, 0, 0, 0, DateTimeKind.Utc),
+                Weight    = 28.5m,
+                Sex       = "MALE",
+                Rga       = "RGA-001",
+                CreatedAt = new DateTime(2025, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                IsActive  = true
+            },
+            new Animal
+            {
+                Id        = 2,
+                ResponsavelId   = 2,
+                Name      = "Mia",
+                Nickname  = "Miau",
+                Species   = "CAT",
+                Breed     = "Siamese",
+                BirthDate = new DateTime(2021, 8, 3, 0, 0, 0, DateTimeKind.Utc),
+                Weight    = 4.2m,
+                Sex       = "FEMALE",
+                Rga       = "RGA-002",
+                CreatedAt = new DateTime(2025, 2, 16, 0, 0, 0, DateTimeKind.Utc),
+                IsActive  = true
+            }
+        );
+
+        modelBuilder.Entity<CareEvent>().HasData(
+            new CareEvent
+            {
+                Id            = 1,
+                AnimalId         = 1,
+                Type          = "VACCINE",
+                Title         = "Vacina V10 anual",
+                Description   = "Aplicação da vacina polivalente V10 anual obrigatória.",
+                ScheduledDate = new DateTime(2025, 6, 1, 9, 0, 0, DateTimeKind.Utc),
+                CompletedDate = new DateTime(2025, 6, 1, 9, 30, 0, DateTimeKind.Utc),
+                Status        = "COMPLETED",
+                Priority      = "HIGH",
+                Notes         = "Bolinha reagiu bem. Próxima dose em junho de 2026.",
+                CreatedAt     = new DateTime(2025, 5, 28, 0, 0, 0, DateTimeKind.Utc),
+                IsActive      = true
+            },
+            new CareEvent
+            {
+                Id            = 2,
+                AnimalId         = 2,
+                Type          = "CHECKUP",
+                Title         = "Check-up semestral Mia",
+                Description   = "Consulta de rotina com exames de sangue e urina.",
+                ScheduledDate = new DateTime(2025, 7, 15, 14, 0, 0, DateTimeKind.Utc),
+                CompletedDate = null,
+                Status        = "PENDING",
+                Priority      = "MEDIUM",
+                Notes         = "Agendar jejum de 8h antes da consulta.",
+                CreatedAt     = new DateTime(2025, 7, 1, 0, 0, 0, DateTimeKind.Utc),
+                IsActive      = true
+            }
+        );
     }
 }

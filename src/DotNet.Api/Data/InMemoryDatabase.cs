@@ -4,9 +4,9 @@ namespace DotNet.Api.Data;
 
 public static class InMemoryDatabase
 {
-    public static List<Tutor> Tutors { get; } = new()
+    public static List<Responsavel> Responsaveis { get; } = new()
     {
-        new Tutor
+        new Responsavel
         {
             Id = 1,
             Name = "Ana Souza",
@@ -14,7 +14,7 @@ public static class InMemoryDatabase
             Phone = "11999990000",
             Cpf = "12345678900"
         },
-        new Tutor
+        new Responsavel
         {
             Id = 2,
             Name = "Carlos Lima",
@@ -24,12 +24,12 @@ public static class InMemoryDatabase
         }
     };
 
-    public static List<Pet> Pets { get; } = new()
+    public static List<Animal> Animais { get; } = new()
     {
-        new Pet
+        new Animal
         {
             Id = 1,
-            TutorId = 1,
+            ResponsavelId = 1,
             Name = "Thor",
             Nickname = "Toto",
             Species = "DOG",
@@ -39,10 +39,10 @@ public static class InMemoryDatabase
             Sex = "MALE",
             Rga = "RGA123456"
         },
-        new Pet
+        new Animal
         {
             Id = 2,
-            TutorId = 2,
+            ResponsavelId = 2,
             Name = "Luna",
             Nickname = "Lulu",
             Species = "CAT",
@@ -59,7 +59,7 @@ public static class InMemoryDatabase
         new CareEvent
         {
             Id = 1,
-            PetId = 1,
+            AnimalId = 1,
             Type = "VACCINE",
             Title = "Vacina anual",
             Description = "Aplicação da vacina anual do Thor.",
@@ -67,12 +67,12 @@ public static class InMemoryDatabase
             CompletedDate = null,
             Status = "PENDING",
             Priority = "HIGH",
-            Notes = "Tutor deve levar carteira de vacinação."
+            Notes = "Responsavel deve levar carteira de vacinação."
         },
         new CareEvent
         {
             Id = 2,
-            PetId = 1,
+            AnimalId = 1,
             Type = "CHECKUP",
             Title = "Check-up respiratório",
             Description = "Avaliação preventiva por conta da raça Pug.",
@@ -85,7 +85,7 @@ public static class InMemoryDatabase
         new CareEvent
         {
             Id = 3,
-            PetId = 2,
+            AnimalId = 2,
             Type = "MEDICATION",
             Title = "Controle de medicação",
             Description = "Acompanhamento de medicação prescrita para Luna.",
@@ -93,7 +93,7 @@ public static class InMemoryDatabase
             CompletedDate = null,
             Status = "PENDING",
             Priority = "MEDIUM",
-            Notes = "Confirmar adesão ao tratamento com o tutor."
+            Notes = "Confirmar adesão ao tratamento com o responsável."
         }
     };
 }

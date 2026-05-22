@@ -58,9 +58,9 @@ namespace DotNet.Api.Migrations
                         .HasColumnType("NVARCHAR2(500)")
                         .HasColumnName("NOTES");
 
-                    b.Property<int>("PetId")
+                    b.Property<int>("AnimalId")
                         .HasColumnType("NUMBER(10)")
-                        .HasColumnName("PET_ID");
+                        .HasColumnName("ANIMAL_ID");
 
                     b.Property<string>("Priority")
                         .IsRequired()
@@ -95,7 +95,7 @@ namespace DotNet.Api.Migrations
                     b.ToTable("T_CP_CARE_EVENTS", (string)null);
                 });
 
-            modelBuilder.Entity("DotNet.Api.Models.Pet", b =>
+            modelBuilder.Entity("DotNet.Api.Models.Animal", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -152,9 +152,9 @@ namespace DotNet.Api.Migrations
                         .HasColumnType("NVARCHAR2(30)")
                         .HasColumnName("SPECIES");
 
-                    b.Property<int>("TutorId")
+                    b.Property<int>("ResponsavelId")
                         .HasColumnType("NUMBER(10)")
-                        .HasColumnName("TUTOR_ID");
+                        .HasColumnName("RESPONSAVEL_ID");
 
                     b.Property<decimal>("Weight")
                         .HasPrecision(10, 2)
@@ -163,10 +163,10 @@ namespace DotNet.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("T_CP_PETS", (string)null);
+                    b.ToTable("T_CP_ANIMAIS", (string)null);
                 });
 
-            modelBuilder.Entity("DotNet.Api.Models.Tutor", b =>
+            modelBuilder.Entity("DotNet.Api.Models.Responsavel", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -209,7 +209,7 @@ namespace DotNet.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("T_CP_TUTORS", (string)null);
+                    b.ToTable("T_CP_RESPONSAVEIS", (string)null);
                 });
 #pragma warning restore 612, 618
         }
