@@ -61,16 +61,16 @@ O **PetCare API** é um sistema de gestão de saúde animal que permite cadastra
 
 ## 🛣️ Rotas da API
 
-### Responsaveis — `/api/responsávels`
+### Responsaveis — `/api/responsaveis`
 
 | Método | Rota | Descrição |
 |--------|------|-----------|
-| GET | `/api/responsávels` | Lista todos os responsáveles |
-| GET | `/api/responsávels/{id}` | Busca responsável por ID |
-| GET | `/api/responsávels/cpf/{cpf}` | Busca responsável por CPF |
-| POST | `/api/responsávels` | Cadastra novo responsável |
-| PUT | `/api/responsávels/{id}` | Atualiza responsável existente |
-| DELETE | `/api/responsávels/{id}` | Remove responsável |
+| GET | `/api/responsaveis` | Lista todos os responsaveis |
+| GET | `/api/responsaveis/{id}` | Busca responsável por ID |
+| GET | `/api/responsaveis/cpf/{cpf}` | Busca responsável por CPF |
+| POST | `/api/responsaveis` | Cadastra novo responsavel |
+| PUT | `/api/responsaveis/{id}` | Atualiza responsável existente |
+| DELETE | `/api/responsaveis/{id}` | Remove responsável |
 
 ### Animais — `/api/animais`
 

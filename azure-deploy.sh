@@ -27,7 +27,7 @@ SSH_PORT="22"
 ORACLE_PORT="1521"
 
 # Repositório GitHub do projeto
-GITHUB_REPO="https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git"
+GITHUB_REPO="https://github.com/FIAP-2026-CHALLENGE/CloudComputing"
 
 # =============================================================================
 # 1) LOGIN E SELEÇÃO DE SUBSCRIPTION

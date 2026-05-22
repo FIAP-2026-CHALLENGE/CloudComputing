@@ -1,103 +1,242 @@
-# 🎬 ROTEIRO DO VÍDEO — Entrega 1º Sprint
+# 🎬 ROTEIRO COMPLETO DO VÍDEO — 1º Sprint
 # DevOps Tools & Cloud Computing — FIAP
-# Duração estimada: 8 a 12 minutos
-# Qualidade mínima: 720p | Narração por voz obrigatória em TODAS as partes
-# ============================================================
+# ─────────────────────────────────────────────────────────────
+# REGRAS OBRIGATÓRIAS ANTES DE COMEÇAR:
+#   ✓ Resolução MÍNIMA 720p (1280×720) — abaixo disso = ZERO de nota
+#   ✓ Narração por VOZ em TODAS as partes — sem voz = ZERO de nota
+#   ✓ Mostre o terminal e o navegador claramente — sem zoom excessivo
+#   ✓ NÃO grave em localhost — a aplicação deve rodar na VM Azure
+# ─────────────────────────────────────────────────────────────
 
-## ─────────────────────────────────────────────
-## PARTE 1 — SCRIPT AZURE CLI (Tarefa 01) ~3 min
-## ─────────────────────────────────────────────
+---
 
-### [CENA 1] Tela do terminal aberta, projeto clonado na pasta
+## ✅ PREPARAÇÃO ANTES DE GRAVAR (não aparece no vídeo)
 
-FALA:
-"Olá, meu nome é [SEU NOME], RM [SEU RM], e vou demonstrar a entrega
-do 1º Sprint da disciplina DevOps Tools & Cloud Computing.
-Começo mostrando o script Azure CLI que provisiona toda a infraestrutura
-necessária para rodar o projeto em nuvem."
+### O que você precisa ter instalado na sua máquina:
+- **Azure CLI** → https://docs.microsoft.com/cli/azure/install-azure-cli
+- **Git**
+- **Terminal** (PowerShell, Git Bash ou Terminal do macOS/Linux)
+- **Navegador** (Chrome ou Edge)
 
-AÇÃO:
-- Abrir o arquivo azure-deploy.sh no editor (VS Code ou nano)
-- Rolar devagar pelo arquivo mostrando as 7 seções comentadas:
-  * Variáveis (Resource Group, VM, NSG)
-  * az login
-  * az group create
-  * az vm create
-  * az network nsg rule create (portas 22, 8081, 1521)
-  * az vm run-command (instalação Docker + Git)
-  * az vm run-command (clone do repo + docker compose up)
+### Passo único que você faz ANTES de ligar a gravação:
 
-FALA:
-"O script é dividido em 7 etapas sequenciais. Primeiro define as variáveis,
-depois faz login na Azure, cria o Resource Group, provisiona a VM Ubuntu 24.04,
-abre as portas necessárias no NSG — SSH na 22, a API na 8081 e o Oracle na 1521 —
-instala o Docker, o Git e o nano diretamente na VM via run-command,
-e por fim clona o repositório e sobe a aplicação com docker compose up em background."
+1. Abra o arquivo `azure-deploy.sh` e edite a linha:
+   ```
+   GITHUB_REPO="https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git"
+   ```
+   Troque pelo link real do seu repositório GitHub (o mesmo que vai no PDF).
 
-### [CENA 2] Executar o script ao vivo
+2. Salve o arquivo, faça commit e push para o GitHub:
+   ```bash
+   git add .
+   git commit -m "feat: projeto finalizado"
+   git push
+   ```
 
-AÇÃO:
-- No terminal: chmod +x azure-deploy.sh && ./azure-deploy.sh
-- Deixar rodar mostrando cada etapa sendo executada
-- Quando terminar, mostrar o resumo final com o IP público impresso no terminal
+> Isso é tudo. O script cuida do resto — ele faz login na Azure,
+> cria a VM, instala o Docker, clona seu repositório e sobe tudo sozinho.
+> Você NÃO precisa colocar senha, subscription ID nem nada no script.
 
-FALA:
-"Vou executar o script agora. Cada etapa é exibida numerada no terminal.
-[enquanto roda] Aqui o Resource Group sendo criado... a VM sendo provisionada...
-as portas abrindo no NSG... o Docker sendo instalado...
-e aqui o docker compose subindo em background na VM.
-Ao final, o script imprime o IP público e a URL do Swagger onde a aplicação
-já está acessível externamente."
+---
 
-## ─────────────────────────────────────────────
-## PARTE 2 — APLICAÇÃO DOCKER NA NUVEM (Tarefa 02) ~5 min
-## ─────────────────────────────────────────────
+## 🎬 PARTE 1 — SCRIPT AZURE CLI (Tarefa 01) | ~4 minutos
 
-### [CENA 3] Mostrar docker-compose.yml e Dockerfile
+---
 
-AÇÃO:
-- Abrir docker-compose.yml no editor
-- Destacar: dois serviços, rede bridge, volume nomeado, depends_on + healthcheck
-- Abrir Dockerfile
-- Destacar: multi-stage build, USER 1654 (non-root), EXPOSE 8080
+### 📍 CENA 1 — Mostrar o arquivo azure-deploy.sh
+**Tela:** Editor de código (VS Code) com o arquivo `azure-deploy.sh` aberto
 
-FALA:
-"Agora mostro a configuração Docker. No docker-compose.yml temos dois serviços:
-o banco Oracle XE na porta 1521, e a API .NET na porta 8081.
-O Oracle usa um volume nomeado 'cloudcomputing-oracle-data' para persistência dos dados.
-A API só sobe depois que o Oracle passa no healthcheck — evitando erros de conexão
-na inicialização.
-No Dockerfile usamos multi-stage build: compilamos no SDK e executamos na imagem
-runtime menor do aspnet. Importante: o container roda com o usuário 1654,
-sem privilégios root — requisito da disciplina."
+**FALA:**
+> "Olá, sou [SEU NOME], RM [SEU RM]. Vou apresentar a entrega do
+> primeiro sprint da disciplina DevOps Tools e Cloud Computing.
+> Começando pela Tarefa 1: o script Azure CLI que provisiona toda
+> a infraestrutura na nuvem automaticamente."
 
-### [CENA 4] Acessar o Swagger da aplicação rodando na nuvem
+**AÇÃO:** Role devagar o arquivo de cima para baixo enquanto fala:
 
-AÇÃO:
-- No navegador: abrir http://[IP_PUBLICO]:8081/swagger
-- Mostrar as 3 seções: Responsaveis, Animais, CareEvents
-- Expandir alguns endpoints para mostrar os parâmetros
+> "O script está dividido em 7 etapas sequenciais. No topo ficam
+> as variáveis — o nome do Resource Group, a região eastus, o nome
+> da VM, o tamanho Standard B2s que é suficiente para este projeto,
+> e a URL do repositório GitHub que vai ser clonado automaticamente
+> dentro da VM."
 
-FALA:
-"Aqui está a aplicação rodando em nuvem. Acesso o Swagger pelo IP público
-da VM na porta 8081. Temos três grupos de rotas: Responsaveis para cadastro de responsáveles,
-Animais para os animais, e CareEvents para os eventos de cuidado veterinário.
-Cada entidade tem as operações GET, POST, PUT e DELETE completas."
+**AÇÃO:** Mostre a seção de variáveis (`RESOURCE_GROUP`, `VM_NAME`, `GITHUB_REPO`)
 
-### [CENA 5] Demonstrar CRUD — mostrar dados seedados e executar operações
+> "A etapa 1 faz o login na Azure via `az login`. A etapa 2 cria o
+> Resource Group. A etapa 3 provisiona a VM Linux Ubuntu 24.04 com
+> IP público e NSG. A etapa 4 abre as três portas necessárias: a 22
+> para SSH, a 8081 para a API, e a 1521 para o Oracle."
 
-AÇÃO SEQUENCIAL NO SWAGGER (mostrar cada uma claramente):
+**AÇÃO:** Role até a seção de NSG rules
 
-1. GET /api/responsávels — mostrar os 2 responsáveles seedados (Ana Paula, Carlos Eduardo)
-2. GET /api/animais — mostrar os 2 animais seedados (Bolinha, Mia)
-3. GET /api/care-events — mostrar os 2 eventos seedados (Vacina V10, Check-up)
+> "A etapa 5 executa um script remoto dentro da VM usando o
+> `run-command` do Azure CLI. Esse comando instala o Docker Engine,
+> o docker-compose-plugin, o Git e o nano — sem precisar entrar na VM
+> via SSH. A etapa 6 clona o repositório e sobe os containers com
+> `docker compose up -d`. Por último, a etapa 7 imprime o resumo
+> com o IP público e a URL do Swagger."
 
-FALA ao mostrar o GET inicial:
-"Ao subir, a aplicação aplica automaticamente as migrations do EF Core e
-popula o banco com dados iniciais. Vemos aqui os responsáveles, animais e eventos
-de cuidado já inseridos — são os inserts significativos exigidos pelo enunciado."
+---
 
-4. POST /api/responsávels — criar novo responsável:
+### 📍 CENA 2 — Executar o script ao vivo
+**Tela:** Terminal aberto na pasta raiz do projeto
+
+**AÇÃO:** Digite e execute:
+```bash
+chmod +x azure-deploy.sh
+./azure-deploy.sh
+```
+
+**FALA:**
+> "Vou executar o script agora. A primeira coisa que ele faz é o
+> `az login`, que vai abrir o navegador para eu autenticar com
+> minha conta Azure da FIAP."
+
+**AÇÃO:** O navegador abre automaticamente → faça login com sua conta → volte para o terminal
+
+**FALA:**
+> "Login feito. O script agora segue automaticamente as etapas.
+> Aqui o Resource Group sendo criado..."
+
+**AÇÃO:** Aguarde e aponte para o terminal conforme cada etapa aparece:
+
+- Quando aparecer `[2/7] Criando Resource Group`:
+  > "Etapa 2 — Resource Group `rg-cloudcomputing` criado na região East US."
+
+- Quando aparecer `[3/7] Criando VM`:
+  > "Etapa 3 — Provisionando a VM Linux Ubuntu 24.04. Isso leva
+  > cerca de um minuto..."
+
+- Quando aparecer `VM criada com sucesso! IP Público: X.X.X.X`:
+  > "VM criada. O IP público já aparece aqui no terminal."
+
+- Quando aparecer `[4/7] Abrindo portas`:
+  > "Etapa 4 — Criando as regras no NSG para liberar as portas
+  > SSH, API e Oracle."
+
+- Quando aparecer `[5/7] Instalando Docker`:
+  > "Etapa 5 — O Azure CLI está executando comandos remotamente
+  > dentro da VM para instalar o Docker e as ferramentas. Isso
+  > leva alguns minutos."
+
+- Quando aparecer `[6/7] Clonando repositório`:
+  > "Etapa 6 — Clonando o repositório do GitHub dentro da VM
+  > e subindo os containers com docker compose em background."
+
+- Quando aparecer o resumo `[7/7] PROVISIONAMENTO CONCLUIDO`:
+  > "Provisionamento concluído! Aqui está o resumo: o IP público
+  > da VM, a URL da API com o Swagger, e o comando SSH para acessar
+  > a máquina. O script da Tarefa 1 está completo."
+
+**AÇÃO:** Deixe o terminal visível com o resumo final — tire um print desta tela.
+
+---
+
+## 🎬 PARTE 2 — APLICAÇÃO DOCKER EM NUVEM (Tarefa 02) | ~5 minutos
+
+---
+
+### 📍 CENA 3 — Mostrar Dockerfile e docker-compose.yml
+**Tela:** VS Code com os arquivos abertos
+
+**FALA:**
+> "Agora a Tarefa 2: a aplicação rodando com Docker em nuvem.
+> Vou mostrar primeiro a configuração dos containers."
+
+**AÇÃO:** Abra o `Dockerfile`
+
+> "O Dockerfile usa multi-stage build: a primeira etapa compila
+> o projeto com a imagem SDK do .NET 10, e a segunda etapa usa
+> só a imagem runtime — muito menor — para executar. Aqui embaixo
+> tem uma linha importante: `USER 1654`. Isso garante que a aplicação
+> roda com um usuário sem privilégios administrativos dentro do
+> container, não como root."
+
+**AÇÃO:** Destaque a linha `USER 1654`
+
+**AÇÃO:** Abra o `docker-compose.yml`
+
+> "No docker-compose temos dois serviços. O primeiro é o banco
+> Oracle XE usando a imagem `gvenzl/oracle-xe`, que é a imagem
+> sugerida pela disciplina. Ele tem um volume nomeado chamado
+> `cloudcomputing-oracle-data` montado em `/opt/oracle/oradata` —
+> isso é o que garante que os dados persistem mesmo se o container
+> for recriado."
+
+**AÇÃO:** Destaque o bloco `volumes`
+
+> "O segundo serviço é a API .NET. Repare no `depends_on` com
+> `condition: service_healthy` — a API só sobe depois que o Oracle
+> passa no healthcheck, evitando erro de conexão na inicialização.
+> Ambos os serviços têm `restart: unless-stopped`, então se a VM
+> reiniciar eles sobem automaticamente."
+
+**AÇÃO:** Destaque `depends_on`, `healthcheck` e `restart: unless-stopped`
+
+> "Os dois containers estão na mesma rede bridge `cloudcomputing-network`,
+> então a API se comunica com o Oracle pelo nome do serviço, não
+> por IP."
+
+---
+
+### 📍 CENA 4 — Acessar o Swagger na nuvem
+**Tela:** Navegador
+
+**AÇÃO:** Abra o navegador e acesse:
+```
+http://[IP_PUBLICO_DA_VM]:8081/swagger
+```
+(use o IP que apareceu no terminal ao final da Cena 2)
+
+**FALA:**
+> "Aqui está a aplicação rodando em nuvem, acessível externamente
+> pelo IP público da VM na porta 8081. O Swagger mostra as três
+> entidades do sistema: Responsaveis, Animais e CareEvents."
+
+**AÇÃO:** Mostre as três seções expandidas no Swagger
+
+> "Este é um sistema de gestão de saúde animal. Responsaveis são
+> os donos dos animais, Animais são os pets cadastrados com seus
+> dados clínicos, e CareEvents registram eventos veterinários como
+> vacinas, consultas e exames."
+
+---
+
+### 📍 CENA 5 — Demonstrar CRUD e banco de dados
+**Tela:** Swagger no navegador
+
+**FALA:**
+> "Vou demonstrar o CRUD completo e mostrar cada operação
+> refletida no banco Oracle."
+
+#### ▶ GET — mostrar dados seedados
+
+**AÇÃO:** Clique em `GET /api/responsaveis` → Execute
+
+**FALA:**
+> "O GET em responsaveis retorna os dois registros que foram
+> inseridos automaticamente quando a aplicação subiu. As migrations
+> do EF Core populam o banco com dados iniciais — Ana Paula Souza
+> e Carlos Eduardo Lima já estão cadastrados."
+
+**AÇÃO:** Clique em `GET /api/animais` → Execute
+
+**FALA:**
+> "Os dois animais também já estão no banco: Bolinha, um Labrador
+> vinculado à Ana Paula, e Mia, uma Siamese vinculada ao Carlos."
+
+**AÇÃO:** Clique em `GET /api/care-events` → Execute
+
+**FALA:**
+> "E os dois eventos de cuidado: uma vacina V10 já concluída para
+> o Bolinha, e um check-up pendente para a Mia. Esses são os inserts
+> com conteúdo significativo exigidos pela disciplina."
+
+---
+
+#### ▶ POST — criar novo registro
+
+**AÇÃO:** Clique em `POST /api/responsaveis` → Try it out → preencha:
 ```json
 {
   "name": "Fernanda Costa",
@@ -106,9 +245,13 @@ de cuidado já inseridos — são os inserts significativos exigidos pelo enunci
   "cpf": "111.222.333-44"
 }
 ```
-FALA: "Crio um novo responsável via POST. Retorno 201 com o objeto criado."
+→ Execute
 
-5. POST /api/animais — criar novo animal (responsavelId do responsável recém criado):
+**FALA:**
+> "POST para criar um novo responsável. Retorno 201 com o objeto
+> criado e o ID gerado pelo banco Oracle."
+
+**AÇÃO:** Clique em `POST /api/animais` → Try it out → preencha:
 ```json
 {
   "responsavelId": 3,
@@ -122,9 +265,13 @@ FALA: "Crio um novo responsável via POST. Retorno 201 com o objeto criado."
   "rga": "RGA-003"
 }
 ```
-FALA: "Cadastro o animal Rex vinculado ao responsável recém criado."
+→ Execute
 
-6. POST /api/care-events — criar evento:
+**FALA:**
+> "Cadastro o animal Rex vinculado ao responsável que acabei de criar.
+> O campo `responsavelId` 3 é o ID que o banco atribuiu à Fernanda."
+
+**AÇÃO:** Clique em `POST /api/care-events` → Try it out → preencha:
 ```json
 {
   "animalId": 3,
@@ -137,76 +284,184 @@ FALA: "Cadastro o animal Rex vinculado ao responsável recém criado."
   "notes": "Levar carteira de vacinação."
 }
 ```
-FALA: "Registro um evento de vacinação para o Rex."
+→ Execute
 
-7. GET /api/care-events — listar tudo, mostrar o novo evento aparecendo
-8. PATCH /api/care-events/3/complete — marcar como concluído
-9. GET /api/care-events/3 — mostrar status COMPLETED com completedDate preenchida
+**FALA:**
+> "Registro um evento de vacinação para o Rex. Status PENDING,
+> prioridade HIGH."
 
-FALA: "Aqui completo o evento de vacinação. O status muda para COMPLETED
-e a data de conclusão é preenchida automaticamente. Demonstrei GET, POST,
-PUT, PATCH e DELETE ao longo da apresentação — o CRUD completo funcionando
-em nuvem com persistência no Oracle containerizado."
+---
 
-10. PUT /api/responsávels/3 — atualizar o responsável
-11. DELETE /api/responsávels/1 — deletar (ou mostrar o endpoint)
+#### ▶ GET — confirmar que o dado persiste
 
-FALA: "Aqui o PUT para atualizar um responsável e o DELETE para remoção.
-Todas as operações estão refletidas no banco Oracle em nuvem."
+**AÇÃO:** `GET /api/care-events` → Execute
 
-### [CENA 6] Verificar containers e volume na VM via SSH
+**FALA:**
+> "O GET agora retorna três eventos — os dois do seed mais o que
+> acabei de criar. Os dados estão persistidos no Oracle."
 
-AÇÃO:
-- ssh cloudadmin@[IP_PUBLICO]
-- docker compose ps  →  mostrar ambos containers "running"
-- docker volume ls   →  mostrar cloudcomputing-oracle-data
-- docker ps          →  mostrar restart policy e tempo de uptime
+---
 
-FALA:
-"Conecto via SSH na VM para confirmar os requisitos técnicos.
-Os dois containers estão rodando em background com restart unless-stopped —
-se a VM reiniciar, sobem automaticamente.
-O volume nomeado 'cloudcomputing-oracle-data' está montado, garantindo a
-persistência dos dados do Oracle mesmo que o container seja recriado.
-E podemos ver que a aplicação roda com o usuário 1654, sem root."
+#### ▶ PUT — atualizar
 
-## ─────────────────────────────────────────────
-## PARTE 3 — DESTRUIÇÃO DA VM (Obrigatório) ~1 min
-## ─────────────────────────────────────────────
+**AÇÃO:** `PUT /api/responsaveis/3` → Try it out → preencha:
+```json
+{
+  "name": "Fernanda Costa Silva",
+  "email": "fernanda.silva@email.com",
+  "phone": "(11) 95555-9999",
+  "cpf": "111.222.333-44",
+  "isActive": true
+}
+```
+→ Execute
 
-### [CENA 7] Deletar o Resource Group
+**FALA:**
+> "PUT para atualizar o responsável. Retorno 204 No Content —
+> a atualização foi feita com sucesso."
 
-AÇÃO:
-- No terminal local (ou Azure Portal):
-  az group delete --name rg-cloudcomputing --yes
-- Aguardar confirmação ou mostrar no Portal que a deleção iniciou
+---
 
-FALA:
-"Por último, e de forma obrigatória conforme o enunciado, deleto a Máquina Virtual
-e todos os recursos criados. Executo o comando az group delete, que remove
-o Resource Group inteiro — VM, NSG, IP público e todos os recursos associados.
-Manterei o print desta tela como evidência para o PDF de entrega."
+#### ▶ PATCH — operação especial
 
-AÇÃO:
-- Tirar screenshot da tela mostrando o comando + confirmação de deleção
-- (opcional) Abrir o Azure Portal e mostrar que o Resource Group sumiu
+**AÇÃO:** `PATCH /api/care-events/3/complete` → Try it out → Execute
 
-FALA:
-"Aqui a evidência da remoção. Encerrando assim a demonstração do 1º Sprint.
-Obrigado!"
+**FALA:**
+> "O CareEvents tem um endpoint PATCH especial para marcar um
+> evento como concluído. Ele preenche automaticamente a data de
+> conclusão."
 
-## ─────────────────────────────────────────────
-## CHECKLIST ANTES DE PUBLICAR NO YOUTUBE
-## ─────────────────────────────────────────────
-# [ ] Resolução mínima 720p (1280x720) — abaixo disso = ZERO
-# [ ] Narração por voz em TODAS as cenas — sem narração = ZERO
-# [ ] Mostrou o script CLI rodando (Cena 2)
-# [ ] Mostrou docker compose ps com containers UP (Cena 6)
-# [ ] Mostrou volume nomeado (Cena 6)
-# [ ] Mostrou USER != root (Cena 6 ou Cena 3)
-# [ ] Executou todas as operações do banco (GET, POST, PUT, DELETE, PATCH)
-# [ ] Mostrou dados seedados no banco (Cena 5)
-# [ ] Deletou a VM ao final (Cena 7)
-# [ ] Screenshot da VM deletada salvo para o PDF
-# [ ] Vídeo publicado como Não Listado ou Público no YouTube
-# [ ] Link do vídeo inserido no PDF de entrega
+**AÇÃO:** `GET /api/care-events/3` → Execute
+
+**FALA:**
+> "Confirmando: o status mudou para COMPLETED e o campo
+> completedDate foi preenchido automaticamente pelo sistema."
+
+---
+
+#### ▶ DELETE — remover
+
+**AÇÃO:** `DELETE /api/care-events/3` → Try it out → Execute
+
+**FALA:**
+> "E o DELETE removendo o evento. Retorno 204. Demonstrei todas
+> as operações: GET, POST, PUT, PATCH e DELETE — o CRUD completo
+> funcionando em nuvem com persistência real no Oracle containerizado."
+
+---
+
+### 📍 CENA 6 — Verificar containers rodando via SSH
+**Tela:** Terminal
+
+**AÇÃO:** Conecte na VM via SSH:
+```bash
+ssh cloudadmin@[IP_PUBLICO_DA_VM]
+```
+
+**FALA:**
+> "Vou conectar na VM via SSH para confirmar os requisitos técnicos
+> diretamente no servidor."
+
+**AÇÃO:** Execute:
+```bash
+docker compose ps
+```
+
+**FALA:**
+> "Os dois containers estão com status `running` e com o uptime
+> mostrando que estão rodando desde que o script os subiu."
+
+**AÇÃO:** Execute:
+```bash
+docker volume ls
+```
+
+**FALA:**
+> "O volume nomeado `cloudcomputing-oracle-data` está listado aqui,
+> garantindo que os dados do Oracle persistem independente do
+> ciclo de vida do container."
+
+**AÇÃO:** Execute:
+```bash
+docker inspect cloudcomputing-api | grep -i user
+```
+
+**FALA:**
+> "E confirmando que a API roda com o usuário 1654, não como root.
+> Esse é um requisito explícito da disciplina."
+
+---
+
+## 🎬 PARTE 3 — DESTRUIÇÃO DA VM (Obrigatório) | ~2 minutos
+
+---
+
+### 📍 CENA 7 — Executar o azure-destroy.sh
+**Tela:** Terminal local (não dentro da VM — saia da SSH primeiro com `exit`)
+
+**FALA:**
+> "Por último, e de forma obrigatória conforme o enunciado,
+> vou deletar a Máquina Virtual e todos os recursos criados
+> na Azure. Para isso tenho o script `azure-destroy.sh`."
+
+**AÇÃO:** Execute:
+```bash
+./azure-destroy.sh
+```
+
+**FALA:**
+> "O script primeiro verifica se estou logado e lista todos os
+> recursos que serão removidos: a VM, o NSG, o IP público e os
+> discos associados."
+
+**AÇÃO:** Aguarde a listagem aparecer. Mostre a tabela de recursos na tela.
+
+> "Aqui estão todos os recursos do Resource Group
+> `rg-cloudcomputing`. Vou confirmar a exclusão digitando
+> a palavra DELETAR."
+
+**AÇÃO:** Digite `DELETAR` quando solicitado e pressione Enter.
+
+> "Solicitação enviada. O script aguarda automaticamente a
+> confirmação da Azure, verificando o status a cada 30 segundos."
+
+**AÇÃO:** Aguarde o loop mostrar `Resource Group existe: false`
+
+> "Confirmado — o Resource Group não existe mais. Todos os recursos
+> foram removidos. Vou tirar o print desta tela agora para incluir
+> no PDF de entrega como evidência obrigatória."
+
+**AÇÃO:** 📸 **TIRE O PRINT DESTA TELA** — é a evidência para o PDF.
+
+**FALA:**
+> "Encerrando assim a demonstração do primeiro sprint da disciplina
+> DevOps Tools e Cloud Computing. Obrigado."
+
+---
+
+## 📋 CHECKLIST FINAL — confira antes de publicar no YouTube
+
+```
+TÉCNICO:
+[ ] Vídeo em resolução mínima 720p (1280×720)
+[ ] Narração por voz em TODAS as cenas — sem exceção
+[ ] Mostrou o azure-deploy.sh rodando do início ao fim
+[ ] Mostrou o IP público da VM ao final do script
+[ ] Mostrou Dockerfile com USER 1654
+[ ] Mostrou docker-compose.yml com volume nomeado e healthcheck
+[ ] Acessou o Swagger pelo IP público (não localhost)
+[ ] Executou GET mostrando dados seedados no banco
+[ ] Executou POST, PUT, PATCH e DELETE — todas operações visíveis
+[ ] Conectou via SSH e mostrou docker compose ps (containers UP)
+[ ] Mostrou docker volume ls com o volume nomeado
+[ ] Executou azure-destroy.sh ao final
+[ ] Aguardou e mostrou confirmação "Resource Group existe: false"
+[ ] Tirou print da tela de confirmação de exclusão
+
+PDF:
+[ ] Print da exclusão da VM salvo
+[ ] Link do repositório GitHub no PDF
+[ ] Link do vídeo no YouTube no PDF
+[ ] Diagrama de arquitetura com legendas no PDF
+[ ] Folha de rosto com nome, RM e índice no PDF
+```
