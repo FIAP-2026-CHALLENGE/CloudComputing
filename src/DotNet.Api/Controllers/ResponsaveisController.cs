@@ -25,7 +25,7 @@ public class ResponsaveisController : ControllerBase
             .AsNoTracking()
             .ToListAsync();
 
-        return Ok(responsávels);
+        return Ok(responsaveis);
     }
 
     [HttpGet("{id:int}")]
@@ -37,12 +37,12 @@ public class ResponsaveisController : ControllerBase
             .AsNoTracking()
             .FirstOrDefaultAsync(t => t.Id == id);
 
-        if (responsável is null)
+        if (responsavel is null)
         {
             return NotFound();
         }
 
-        return Ok(responsável);
+        return Ok(responsavel);
     }
 
     [HttpGet("cpf/{cpf}")]
@@ -54,43 +54,43 @@ public class ResponsaveisController : ControllerBase
             .AsNoTracking()
             .FirstOrDefaultAsync(t => t.Cpf == cpf);
 
-        if (responsável is null)
+        if (responsavel is null)
         {
             return NotFound();
         }
 
-        return Ok(responsável);
+        return Ok(responsavel);
     }
 
     [HttpPost]
     [ProducesResponseType(typeof(Responsavel), 201)]
     [ProducesResponseType(400)]
-    public async Task<ActionResult<Responsavel>> Create(Responsavel responsável)
+    public async Task<ActionResult<Responsavel>> Create(Responsavel responsavel)
     {
-        if (string.IsNullOrWhiteSpace(responsável.Name) ||
-            string.IsNullOrWhiteSpace(responsável.Email) ||
-            string.IsNullOrWhiteSpace(responsável.Phone) ||
-            string.IsNullOrWhiteSpace(responsável.Cpf))
+        if (string.IsNullOrWhiteSpace(responsavel.Name) ||
+            string.IsNullOrWhiteSpace(responsavel.Email) ||
+            string.IsNullOrWhiteSpace(responsavel.Phone) ||
+            string.IsNullOrWhiteSpace(responsavel.Cpf))
         {
             return BadRequest("Name, email, phone and CPF are required.");
         }
 
         var cpfAlreadyExists = await _context.Responsaveis
-            .CountAsync(t => t.Cpf == responsável.Cpf) > 0;
+            .CountAsync(t => t.Cpf == responsavel.Cpf) > 0;
 
         if (cpfAlreadyExists)
         {
             return BadRequest("CPF already registered.");
         }
 
-        responsável.Id = 0;
-        responsável.CreatedAt = DateTime.UtcNow;
-        responsável.IsActive = true;
+        responsavel.Id = 0;
+        responsavel.CreatedAt = DateTime.UtcNow;
+        responsavel.IsActive = true;
 
-        _context.Responsaveis.Add(responsável);
+        _context.Responsaveis.Add(responsavel);
         await _context.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetById), new { id = responsável.Id }, responsável);
+        return CreatedAtAction(nameof(GetById), new { id = responsavel.Id }, responsavel);
     }
 
     [HttpPut("{id:int}")]
@@ -102,7 +102,7 @@ public class ResponsaveisController : ControllerBase
         var responsavel = await _context.Responsaveis
             .FirstOrDefaultAsync(t => t.Id == id);
 
-        if (responsável is null)
+        if (responsavel is null)
         {
             return NotFound();
         }
@@ -123,11 +123,11 @@ public class ResponsaveisController : ControllerBase
             return BadRequest("CPF already registered by another responsável.");
         }
 
-        responsável.Name = responsavelAtualizado.Name;
-        responsável.Email = responsavelAtualizado.Email;
-        responsável.Phone = responsavelAtualizado.Phone;
-        responsável.Cpf = responsavelAtualizado.Cpf;
-        responsável.IsActive = responsavelAtualizado.IsActive;
+        responsavel.Name = responsavelAtualizado.Name;
+        responsavel.Email = responsavelAtualizado.Email;
+        responsavel.Phone = responsavelAtualizado.Phone;
+        responsavel.Cpf = responsavelAtualizado.Cpf;
+        responsavel.IsActive = responsavelAtualizado.IsActive;
 
         await _context.SaveChangesAsync();
 
@@ -142,12 +142,12 @@ public class ResponsaveisController : ControllerBase
         var responsavel = await _context.Responsaveis
             .FirstOrDefaultAsync(t => t.Id == id);
 
-        if (responsável is null)
+        if (responsavel is null)
         {
             return NotFound();
         }
 
-        _context.Responsaveis.Remove(responsável);
+        _context.Responsaveis.Remove(responsavel);
         await _context.SaveChangesAsync();
 
         return NoContent();

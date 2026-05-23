@@ -5,16 +5,14 @@
 # CloudComputing (DotNet.Api + Oracle DB via Docker Compose)
 # =============================================================================
 
-set -e  # Encerra o script imediatamente se qualquer comando falhar
-
 # =============================================================================
 # VARIÁVEIS — ajuste conforme necessário
 # =============================================================================
 RESOURCE_GROUP="rg-cloudcomputing"
-LOCATION="eastus"
+LOCATION="canadacentral"
 VM_NAME="vm-cloudcomputing"
 VM_IMAGE="Ubuntu2404"
-VM_SIZE="Standard_B2s"
+VM_SIZE="Standard_B2als_v2"
 ADMIN_USER="cloudadmin"
 VM_PUBLIC_IP_NAME="pip-cloudcomputing"
 NSG_NAME="nsg-cloudcomputing"
@@ -27,14 +25,14 @@ SSH_PORT="22"
 ORACLE_PORT="1521"
 
 # Repositório GitHub do projeto
-GITHUB_REPO="https://github.com/FIAP-2026-CHALLENGE/CloudComputing"
+GITHUB_REPO="https://github.com/FIAP-2026-CHALLENGE/CloudComputing.git"
 
 # =============================================================================
 # 1) LOGIN E SELEÇÃO DE SUBSCRIPTION
 # =============================================================================
 echo ""
 echo "======================================================================"
-echo " [1/7] Autenticando na Azure..."
+echo " [1/6] Autenticando na Azure..."
 echo "======================================================================"
 
 az login --only-show-errors
@@ -45,7 +43,7 @@ az account show --output table
 # =============================================================================
 echo ""
 echo "======================================================================"
-echo " [2/7] Criando Resource Group: $RESOURCE_GROUP em $LOCATION..."
+echo " [2/6] Criando Resource Group: $RESOURCE_GROUP em $LOCATION..."
 echo "======================================================================"
 
 az group create \
@@ -58,7 +56,7 @@ az group create \
 # =============================================================================
 echo ""
 echo "======================================================================"
-echo " [3/7] Criando VM Linux ($VM_NAME)..."
+echo " [3/6] Criando VM Linux ($VM_NAME)..."
 echo "======================================================================"
 
 az vm create \
@@ -89,20 +87,8 @@ echo ">>> VM criada com sucesso! IP Público: $VM_PUBLIC_IP"
 # =============================================================================
 echo ""
 echo "======================================================================"
-echo " [4/7] Abrindo portas necessárias no NSG ($NSG_NAME)..."
+echo " [4/6] Abrindo portas necessárias no NSG ($NSG_NAME)..."
 echo "======================================================================"
-
-# Porta SSH (22) — geralmente já aberta por padrão, criamos explicitamente
-az network nsg rule create \
-  --resource-group "$RESOURCE_GROUP" \
-  --nsg-name "$NSG_NAME" \
-  --name "Allow-SSH" \
-  --protocol tcp \
-  --priority 1000 \
-  --destination-port-range "$SSH_PORT" \
-  --access Allow \
-  --direction Inbound \
-  --output table
 
 # Porta da API (8081)
 az network nsg rule create \
@@ -136,7 +122,7 @@ echo ">>> Portas SSH ($SSH_PORT), API ($API_PORT) e Oracle ($ORACLE_PORT) aberta
 # =============================================================================
 echo ""
 echo "======================================================================"
-echo " [5/7] Instalando Docker, Git, nano e docker-compose-plugin na VM..."
+echo " [5/6] Instalando Docker, Git, nano e docker-compose-plugin na VM..."
 echo "======================================================================"
 
 az vm run-command invoke \
@@ -188,45 +174,18 @@ echo ""
 echo ">>> Docker, Git e nano instalados com sucesso na VM."
 
 # =============================================================================
-# 6) CLONAR O REPOSITÓRIO E SUBIR A APLICAÇÃO COM DOCKER COMPOSE
+# 6) RESUMO FINAL
 # =============================================================================
 echo ""
 echo "======================================================================"
-echo " [6/7] Clonando repositorio e iniciando aplicacao com Docker Compose..."
-echo "======================================================================"
-
-az vm run-command invoke \
-  --resource-group "$RESOURCE_GROUP" \
-  --name "$VM_NAME" \
-  --command-id RunShellScript \
-  --scripts "
-    set -e
-
-    echo '>>> Clonando repositorio...'
-    cd /home/cloudadmin
-    git clone $GITHUB_REPO app
-    cd app
-
-    echo '>>> Subindo containers em background (docker compose up -d)...'
-    docker compose up -d --build
-
-    echo '>>> Containers em execucao:'
-    docker compose ps
-  " \
-  --output table
-
-# =============================================================================
-# 7) RESUMO FINAL
-# =============================================================================
-echo ""
-echo "======================================================================"
-echo " [7/7] PROVISIONAMENTO CONCLUIDO!"
+echo " [6/6] PROVISIONAMENTO CONCLUIDO!"
 echo "======================================================================"
 echo ""
 echo "  Resource Group : $RESOURCE_GROUP"
 echo "  VM             : $VM_NAME"
 echo "  IP Público     : $VM_PUBLIC_IP"
-echo "  API URL        : http://$VM_PUBLIC_IP:$API_PORT/swagger"
+echo "  PRÓXIMO PASSO  : ssh $ADMIN_USER@$VM_PUBLIC_IP"
+echo "  Depois         : git clone <seu-repo> app && cd app && docker compose up -d --build"
 echo "  SSH            : ssh $ADMIN_USER@$VM_PUBLIC_IP"
 echo ""
 echo "======================================================================"
