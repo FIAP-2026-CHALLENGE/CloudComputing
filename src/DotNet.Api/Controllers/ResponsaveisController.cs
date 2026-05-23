@@ -147,9 +147,22 @@ public class ResponsaveisController : ControllerBase
             return NotFound();
         }
 
+        // Remove CareEvents e Animais vinculados antes de remover o responsavel
+        var animais = await _context.Animais
+            .Where(p => p.ResponsavelId == id)
+            .ToListAsync();
+
+        var animalIds = animais.Select(p => p.Id).ToList();
+
+        var careEvents = await _context.CareEvents
+            .Where(e => animalIds.Contains(e.AnimalId))
+            .ToListAsync();
+
+        _context.CareEvents.RemoveRange(careEvents);
+        _context.Animais.RemoveRange(animais);
         _context.Responsaveis.Remove(responsavel);
         await _context.SaveChangesAsync();
 
         return NoContent();
-    }
+    }   
 }

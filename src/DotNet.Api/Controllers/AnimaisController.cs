@@ -223,6 +223,12 @@ public class AnimaisController : ControllerBase
             return NotFound();
         }
 
+        
+        var careEvents = await _context.CareEvents
+            .Where(e => e.AnimalId == id)
+            .ToListAsync();
+
+        _context.CareEvents.RemoveRange(careEvents);
         _context.Animais.Remove(animal);
         await _context.SaveChangesAsync();
 
