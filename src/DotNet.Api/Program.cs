@@ -43,7 +43,7 @@ using (var scope = app.Services.CreateScope())
         logger.LogInformation("Database migrations applied successfully.");
 
         // Seed inicial — só insere se o banco estiver vazio
-        if (!dbContext.Responsaveis.Any())
+        if (dbContext.Responsaveis.Count() == 0)
         {
             logger.LogInformation("Inserting seed data...");
 
