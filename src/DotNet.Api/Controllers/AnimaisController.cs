@@ -1,7 +1,8 @@
-﻿using DotNet.Api.Data;
+using DotNet.Api.Excecoes;
+using DotNet.Api.Infraestrutura.Observabilidade;
 using DotNet.Api.Models;
+using DotNet.Api.Servicos;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace DotNet.Api.Controllers;
 
@@ -10,28 +11,20 @@ namespace DotNet.Api.Controllers;
 [Produces("application/json")]
 public class AnimaisController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly IAnimalServico _servico;
+    private readonly ILogger<AnimaisController> _logger;
 
-    private static readonly string[] AllowedSpecies =
+    public AnimaisController(IAnimalServico servico, ILogger<AnimaisController> logger)
     {
-        "DOG",
-        "CAT"
-    };
-
-    public AnimaisController(AppDbContext context)
-    {
-        _context = context;
+        _servico = servico;
+        _logger = logger;
     }
 
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<Animal>), 200)]
     public async Task<ActionResult<IEnumerable<Animal>>> GetAll()
     {
-        var animais = await _context.Animais
-            .AsNoTracking()
-            .ToListAsync();
-
-        return Ok(animais);
+        return Ok(await _servico.ListarAsync());
     }
 
     [HttpGet("{id:int}")]
@@ -39,16 +32,14 @@ public class AnimaisController : ControllerBase
     [ProducesResponseType(404)]
     public async Task<ActionResult<Animal>> GetById(int id)
     {
-        var animal = await _context.Animais
-            .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Id == id);
-
-        if (animal is null)
+        try
         {
-            return NotFound();
+            return Ok(await _servico.ObterPorIdAsync(id));
         }
-
-        return Ok(animal);
+        catch (RecursoNaoEncontradoException ex)
+        {
+            return NotFound(ex.Message);
+        }
     }
 
     [HttpGet("responsavel/{responsavelId:int}")]
@@ -56,48 +47,28 @@ public class AnimaisController : ControllerBase
     [ProducesResponseType(404)]
     public async Task<ActionResult<IEnumerable<Animal>>> GetByResponsavelId(int responsavelId)
     {
-        var responsavelExists = await _context.Responsaveis
-            .CountAsync(t => t.Id == responsavelId) > 0;
-
-        if (!responsavelExists)
+        try
         {
-            return NotFound("Responsavel not found.");
+            return Ok(await _servico.ListarPorResponsavelIdAsync(responsavelId));
         }
-
-        var animais = await _context.Animais
-            .AsNoTracking()
-            .Where(p => p.ResponsavelId == responsavelId)
-            .ToListAsync();
-
-        return Ok(animais);
+        catch (RecursoNaoEncontradoException ex)
+        {
+            return NotFound(ex.Message);
+        }
     }
 
     [HttpGet("species/{species}")]
     [ProducesResponseType(typeof(IEnumerable<Animal>), 200)]
     public async Task<ActionResult<IEnumerable<Animal>>> GetBySpecies(string species)
     {
-        var normalizedSpecies = species.ToUpper();
-
-        var animais = await _context.Animais
-            .AsNoTracking()
-            .Where(p => p.Species == normalizedSpecies)
-            .ToListAsync();
-
-        return Ok(animais);
+        return Ok(await _servico.ListarPorSpeciesAsync(species));
     }
 
     [HttpGet("breed/{breed}")]
     [ProducesResponseType(typeof(IEnumerable<Animal>), 200)]
     public async Task<ActionResult<IEnumerable<Animal>>> GetByBreed(string breed)
     {
-        var normalizedBreed = breed.ToLower();
-
-        var animais = await _context.Animais
-            .AsNoTracking()
-            .Where(p => p.Breed.ToLower() == normalizedBreed)
-            .ToListAsync();
-
-        return Ok(animais);
+        return Ok(await _servico.ListarPorBreedAsync(breed));
     }
 
     [HttpGet("rga/{rga}")]
@@ -105,16 +76,14 @@ public class AnimaisController : ControllerBase
     [ProducesResponseType(404)]
     public async Task<ActionResult<Animal>> GetByRga(string rga)
     {
-        var animal = await _context.Animais
-            .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Rga == rga);
-
-        if (animal is null)
+        try
         {
-            return NotFound();
+            return Ok(await _servico.ObterPorRgaAsync(rga));
         }
-
-        return Ok(animal);
+        catch (RecursoNaoEncontradoException ex)
+        {
+            return NotFound(ex.Message);
+        }
     }
 
     [HttpPost]
@@ -122,92 +91,65 @@ public class AnimaisController : ControllerBase
     [ProducesResponseType(400)]
     public async Task<ActionResult<Animal>> Create(Animal animal)
     {
-        var responsavelExists = await _context.Responsaveis
-            .CountAsync(t => t.Id == animal.ResponsavelId) > 0;
+        using var activity = AplicacaoMetricas.ActivitySource.StartActivity("CriarAnimal");
+        activity?.SetTag("animal.responsavelId", animal.ResponsavelId);
+        activity?.SetTag("animal.species", animal.Species);
 
-        if (!responsavelExists)
+        try
         {
-            return BadRequest("ResponsavelId does not exist.");
+            var criado = await _servico.CriarAsync(
+                animal.ResponsavelId, animal.Name, animal.Nickname, animal.Species,
+                animal.Breed, animal.BirthDate, animal.Weight, animal.Sex, animal.Rga);
+
+            AplicacaoMetricas.CadastrosRealizados.Add(1,
+                new KeyValuePair<string, object?>("recurso", "animal"),
+                new KeyValuePair<string, object?>("status", "sucesso"));
+
+            _logger.LogInformation(
+                "Animal {AnimalId} ({Nome}) criado com sucesso para Responsavel {ResponsavelId}.",
+                criado.Id, criado.Name, criado.ResponsavelId);
+
+            return CreatedAtAction(nameof(GetById), new { id = criado.Id }, criado);
         }
-
-        var validationError = ValidateAnimal(animal);
-
-        if (validationError is not null)
+        catch (Exception ex) when (ex is ArgumentException or RegraDeNegocioException)
         {
-            return BadRequest(validationError);
+            AplicacaoMetricas.CadastrosRealizados.Add(1,
+                new KeyValuePair<string, object?>("recurso", "animal"),
+                new KeyValuePair<string, object?>("status", "falha"));
+
+            _logger.LogWarning(ex, "Falha ao criar Animal: {Motivo}", ex.Message);
+
+            return BadRequest(ex.Message);
         }
-
-        var rgaAlreadyExists = !string.IsNullOrWhiteSpace(animal.Rga) &&
-            await _context.Animais.CountAsync(p => p.Rga == animal.Rga) > 0;
-
-        if (rgaAlreadyExists)
-        {
-            return BadRequest("RGA already registered.");
-        }
-
-        animal.Id = 0;
-        animal.Species = animal.Species.ToUpper();
-        animal.Sex = animal.Sex.ToUpper();
-        animal.CreatedAt = DateTime.UtcNow;
-        animal.IsActive = true;
-
-        _context.Animais.Add(animal);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(GetById), new { id = animal.Id }, animal);
     }
 
     [HttpPut("{id:int}")]
     [ProducesResponseType(204)]
     [ProducesResponseType(400)]
     [ProducesResponseType(404)]
-    public async Task<IActionResult> Update(int id, Animal animalAtualizado)
+    public async Task<IActionResult> Update(int id, Animal updatedAnimal)
     {
-        var animal = await _context.Animais
-            .FirstOrDefaultAsync(p => p.Id == id);
-
-        if (animal is null)
+        try
         {
-            return NotFound();
+            await _servico.AtualizarAsync(
+                id, updatedAnimal.ResponsavelId, updatedAnimal.Name, updatedAnimal.Nickname,
+                updatedAnimal.Species, updatedAnimal.Breed, updatedAnimal.BirthDate,
+                updatedAnimal.Weight, updatedAnimal.Sex, updatedAnimal.Rga, updatedAnimal.IsActive);
+
+            _logger.LogInformation("Animal {AnimalId} atualizado com sucesso.", id);
+
+            return NoContent();
         }
-
-        var responsavelExists = await _context.Responsaveis
-            .CountAsync(t => t.Id == animalAtualizado.ResponsavelId) > 0;
-
-        if (!responsavelExists)
+        catch (RecursoNaoEncontradoException ex)
         {
-            return BadRequest("ResponsavelId does not exist.");
+            return NotFound(ex.Message);
         }
-
-        var validationError = ValidateAnimal(animalAtualizado);
-
-        if (validationError is not null)
+        catch (Exception ex) when (ex is ArgumentException or RegraDeNegocioException)
         {
-            return BadRequest(validationError);
+            _logger.LogWarning(ex, "Falha ao atualizar Animal {AnimalId}: {Motivo}", id, ex.Message);
+
+            return BadRequest(ex.Message);
         }
-
-        var rgaAlreadyExists = !string.IsNullOrWhiteSpace(animalAtualizado.Rga) &&
-            await _context.Animais.CountAsync(p => p.Rga == animalAtualizado.Rga && p.Id != id) > 0;
-
-        if (rgaAlreadyExists)
-        {
-            return BadRequest("RGA already registered by another animal.");
-        }
-
-        animal.ResponsavelId = animalAtualizado.ResponsavelId;
-        animal.Name = animalAtualizado.Name;
-        animal.Nickname = animalAtualizado.Nickname;
-        animal.Species = animalAtualizado.Species.ToUpper();
-        animal.Breed = animalAtualizado.Breed;
-        animal.BirthDate = animalAtualizado.BirthDate;
-        animal.Weight = animalAtualizado.Weight;
-        animal.Sex = animalAtualizado.Sex.ToUpper();
-        animal.Rga = animalAtualizado.Rga;
-        animal.IsActive = animalAtualizado.IsActive;
-
-        await _context.SaveChangesAsync();
-
-        return NoContent();
     }
 
     [HttpDelete("{id:int}")]
@@ -215,45 +157,17 @@ public class AnimaisController : ControllerBase
     [ProducesResponseType(404)]
     public async Task<IActionResult> Delete(int id)
     {
-        var animal = await _context.Animais
-            .FirstOrDefaultAsync(p => p.Id == id);
-
-        if (animal is null)
+        try
         {
-            return NotFound();
+            await _servico.RemoverAsync(id);
+
+            _logger.LogInformation("Animal {AnimalId} removido com sucesso.", id);
+
+            return NoContent();
         }
-
-        
-        var careEvents = await _context.CareEvents
-            .Where(e => e.AnimalId == id)
-            .ToListAsync();
-
-        _context.CareEvents.RemoveRange(careEvents);
-        _context.Animais.Remove(animal);
-        await _context.SaveChangesAsync();
-
-        return NoContent();
-    }
-
-    private static string? ValidateAnimal(Animal animal)
-    {
-        if (animal.ResponsavelId <= 0 ||
-            string.IsNullOrWhiteSpace(animal.Name) ||
-            string.IsNullOrWhiteSpace(animal.Species) ||
-            string.IsNullOrWhiteSpace(animal.Breed) ||
-            string.IsNullOrWhiteSpace(animal.Sex) ||
-            animal.Weight <= 0)
+        catch (RecursoNaoEncontradoException ex)
         {
-            return "ResponsavelId, name, species, breed, sex and valid weight are required.";
+            return NotFound(ex.Message);
         }
-
-        var normalizedSpecies = animal.Species.ToUpper();
-
-        if (!AllowedSpecies.Contains(normalizedSpecies))
-        {
-            return "Species must be DOG or CAT in this MVP version.";
-        }
-
-        return null;
     }
 }

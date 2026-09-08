@@ -1,0 +1,15 @@
+# .NET build artifacts
+bin/
+obj/
+
+# Environment / secrets
+.env
+aci-deploy.yaml
+
+# Logs
+logs/
+
+# IDE
+.vs/
+.vscode/
+*.user

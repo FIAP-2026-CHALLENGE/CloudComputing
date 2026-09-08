@@ -1,194 +1,123 @@
 #!/bin/bash
+set -e
 # =============================================================================
 # azure-deploy.sh
-# Script de provisionamento completo da infraestrutura Azure para o projeto
-# CloudComputing (DotNet.Api + Oracle DB via Docker Compose)
+# Provisiona ACR + ACI (grupo de containers com API .NET + MySQL) na Azure
+# para o projeto CloudComputing (Sprint 3 - Cloud & DevOps).
 # =============================================================================
 
 # =============================================================================
-# VARIÁVEIS — ajuste conforme necessário
+# VARIÁVEIS — ajuste RM e LOCATION conforme sua conta Azure for Students
 # =============================================================================
-RESOURCE_GROUP="rg-cloudcomputing"
-LOCATION="canadacentral"
-VM_NAME="vm-cloudcomputing"
-VM_IMAGE="Ubuntu2404"
-VM_SIZE="Standard_B2als_v2"
-ADMIN_USER="cloudadmin"
-VM_PUBLIC_IP_NAME="pip-cloudcomputing"
-NSG_NAME="nsg-cloudcomputing"
+RM="562822"                                   # ALTERE PARA SEU RM
+RESOURCE_GROUP="rg-cloudcomputing-${RM}"
+LOCATION="canadacentral"                      # ALTERE SE SUA REGIÃO NÃO TIVER SKU DISPONÍVEL
 
-# Porta da API (mapeada no docker-compose.yml: host 8081 → container 8080)
-API_PORT="8081"
-# Porta SSH padrão
-SSH_PORT="22"
-# Porta Oracle (caso precise acessar externamente)
-ORACLE_PORT="1521"
+ACR_NAME="acrcloudcomputing${RM}"             # só letras/números, sem hífen
+CONTAINER_GROUP="cloudcomputing-aci-${RM}"
+DNS_LABEL="cloudcomputing-${RM}"              # vira parte da URL pública
+IMAGE_TAG="v1"
 
-# Repositório GitHub do projeto
-GITHUB_REPO="https://github.com/FIAP-2026-CHALLENGE/CloudComputing.git"
+STORAGE_ACCOUNT="stcloudcomputing${RM}"       # só letras minúsculas/números, até 24 chars
+FILE_SHARE="cloudcomputing-mysql-data"
 
-# =============================================================================
-# 1) LOGIN E SELEÇÃO DE SUBSCRIPTION
-# =============================================================================
-echo ""
-echo "======================================================================"
-echo " [1/6] Autenticando na Azure..."
-echo "======================================================================"
+# Carrega as credenciais do banco do seu .env (mesmo arquivo usado no Docker local)
+if [ ! -f .env ]; then
+  echo "Arquivo .env não encontrado na raiz do projeto. Copie o .env.example e preencha antes de continuar."
+  exit 1
+fi
+set -a
+source .env
+set +a
 
-az login --only-show-errors
-az account show --output table
+echo "==> Verificando login na Azure..."
+az account show > /dev/null || { echo "Rode 'az login' antes de continuar."; exit 1; }
 
 # =============================================================================
-# 2) CRIAR RESOURCE GROUP
+# 1) RESOURCE GROUP
 # =============================================================================
-echo ""
-echo "======================================================================"
-echo " [2/6] Criando Resource Group: $RESOURCE_GROUP em $LOCATION..."
-echo "======================================================================"
+echo "==> Criando Resource Group..."
+az group create --name "$RESOURCE_GROUP" --location "$LOCATION" --output table
 
-az group create \
-  --name "$RESOURCE_GROUP" \
+# =============================================================================
+# 2) ACR (Azure Container Registry)
+# =============================================================================
+echo "==> Registrando provider do ACR (idempotente, não falha se já estiver registrado)..."
+az provider register --namespace Microsoft.ContainerRegistry
+
+echo "==> Criando ACR..."
+az acr create \
+  --resource-group "$RESOURCE_GROUP" \
+  --name "$ACR_NAME" \
+  --sku Basic \
   --location "$LOCATION" \
+  --admin-enabled true \
   --output table
 
-# =============================================================================
-# 3) CRIAR VM LINUX (Ubuntu 24.04)
-# =============================================================================
-echo ""
-echo "======================================================================"
-echo " [3/6] Criando VM Linux ($VM_NAME)..."
-echo "======================================================================"
+ACR_SERVER=$(az acr show --name "$ACR_NAME" --resource-group "$RESOURCE_GROUP" --query loginServer --output tsv)
+ACR_USERNAME=$(az acr credential show --name "$ACR_NAME" --resource-group "$RESOURCE_GROUP" --query username --output tsv)
+ACR_PASSWORD=$(az acr credential show --name "$ACR_NAME" --resource-group "$RESOURCE_GROUP" --query "passwords[0].value" --output tsv)
 
-az vm create \
+echo "ACR Server: $ACR_SERVER"
+
+# =============================================================================
+# 3) BUILD + PUSH da imagem da API
+# =============================================================================
+echo "==> Fazendo login Docker no ACR..."
+az acr login --name "$ACR_NAME"
+
+echo "==> Buildando a imagem da API..."
+docker build -t cloudcomputing-api:"$IMAGE_TAG" -f Dockerfile .
+
+echo "==> Taggeando e enviando para o ACR..."
+docker tag cloudcomputing-api:"$IMAGE_TAG" "$ACR_SERVER/cloudcomputing-api:$IMAGE_TAG"
+docker push "$ACR_SERVER/cloudcomputing-api:$IMAGE_TAG"
+
+# =============================================================================
+# 4) STORAGE ACCOUNT + FILE SHARE (persistência do MySQL em nuvem)
+# =============================================================================
+echo "==> Criando Storage Account..."
+az storage account create \
+  --name "$STORAGE_ACCOUNT" \
   --resource-group "$RESOURCE_GROUP" \
-  --name "$VM_NAME" \
-  --image "$VM_IMAGE" \
-  --size "$VM_SIZE" \
-  --admin-username "$ADMIN_USER" \
-  --generate-ssh-keys \
-  --public-ip-address "$VM_PUBLIC_IP_NAME" \
-  --public-ip-sku Standard \
-  --nsg "$NSG_NAME" \
+  --location "$LOCATION" \
+  --sku Standard_LRS \
   --output table
 
-# Obtém o IP público da VM
-VM_PUBLIC_IP=$(az vm show \
+STORAGE_KEY=$(az storage account keys list \
   --resource-group "$RESOURCE_GROUP" \
-  --name "$VM_NAME" \
-  --show-details \
-  --query publicIps \
-  --output tsv)
+  --account-name "$STORAGE_ACCOUNT" \
+  --query "[0].value" --output tsv)
 
-echo ""
-echo ">>> VM criada com sucesso! IP Público: $VM_PUBLIC_IP"
-
-# =============================================================================
-# 4) ABRIR PORTAS NO NSG
-# =============================================================================
-echo ""
-echo "======================================================================"
-echo " [4/6] Abrindo portas necessárias no NSG ($NSG_NAME)..."
-echo "======================================================================"
-
-# Porta da API (8081)
-az network nsg rule create \
-  --resource-group "$RESOURCE_GROUP" \
-  --nsg-name "$NSG_NAME" \
-  --name "Allow-API" \
-  --protocol tcp \
-  --priority 1010 \
-  --destination-port-range "$API_PORT" \
-  --access Allow \
-  --direction Inbound \
-  --output table
-
-# Porta Oracle (1521) — opcional, útil para testes externos
-az network nsg rule create \
-  --resource-group "$RESOURCE_GROUP" \
-  --nsg-name "$NSG_NAME" \
-  --name "Allow-Oracle" \
-  --protocol tcp \
-  --priority 1020 \
-  --destination-port-range "$ORACLE_PORT" \
-  --access Allow \
-  --direction Inbound \
-  --output table
-
-echo ""
-echo ">>> Portas SSH ($SSH_PORT), API ($API_PORT) e Oracle ($ORACLE_PORT) abertas."
+echo "==> Criando File Share para os dados do MySQL..."
+az storage share create \
+  --name "$FILE_SHARE" \
+  --account-name "$STORAGE_ACCOUNT" \
+  --account-key "$STORAGE_KEY"
 
 # =============================================================================
-# 5) INSTALAR DOCKER E FERRAMENTAS NA VM VIA cloud-init / run-command
+# 5) GERAR O aci-deploy.yaml FINAL (substitui as variáveis no template)
 # =============================================================================
-echo ""
-echo "======================================================================"
-echo " [5/6] Instalando Docker, Git, nano e docker-compose-plugin na VM..."
-echo "======================================================================"
+echo "==> Gerando aci-deploy.yaml a partir do template..."
+export LOCATION CONTAINER_GROUP DNS_LABEL ACR_SERVER ACR_USERNAME ACR_PASSWORD IMAGE_TAG
+export FILE_SHARE STORAGE_ACCOUNT STORAGE_KEY
+export MYSQL_ROOT_PASSWORD MYSQL_DATABASE MYSQL_USER MYSQL_PASSWORD
 
-az vm run-command invoke \
-  --resource-group "$RESOURCE_GROUP" \
-  --name "$VM_NAME" \
-  --command-id RunShellScript \
-  --scripts '
-    set -e
-
-    echo ">>> Atualizando pacotes..."
-    apt-get update -y
-
-    echo ">>> Instalando dependencias do Docker..."
-    apt-get install -y ca-certificates curl gnupg lsb-release git nano
-
-    echo ">>> Adicionando repositorio oficial do Docker..."
-    install -m 0755 -d /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
-      | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    chmod a+r /etc/apt/keyrings/docker.gpg
-
-    echo \
-      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
-      https://download.docker.com/linux/ubuntu \
-      $(lsb_release -cs) stable" \
-      | tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-    echo ">>> Instalando Docker Engine e docker-compose-plugin..."
-    apt-get update -y
-    apt-get install -y docker-ce docker-ce-cli containerd.io \
-      docker-buildx-plugin docker-compose-plugin
-
-    echo ">>> Habilitando e iniciando Docker..."
-    systemctl enable docker
-    systemctl start docker
-
-    echo ">>> Adicionando usuario cloudadmin ao grupo docker..."
-    usermod -aG docker cloudadmin
-
-    echo ">>> Versoes instaladas:"
-    docker --version
-    docker compose version
-    git --version
-    nano --version | head -1
-  ' \
-  --output table
-
-echo ""
-echo ">>> Docker, Git e nano instalados com sucesso na VM."
+envsubst < aci-deploy.yaml.template > aci-deploy.yaml
 
 # =============================================================================
-# 6) RESUMO FINAL
+# 6) CRIAR O GRUPO DE CONTAINERS (ACI)
 # =============================================================================
+echo "==> Criando o grupo de containers (API + MySQL) via ACI..."
+az container create --resource-group "$RESOURCE_GROUP" --file aci-deploy.yaml
+
+# =============================================================================
+# 7) RESULTADO
+# =============================================================================
+FQDN=$(az container show --resource-group "$RESOURCE_GROUP" --name "$CONTAINER_GROUP" --query ipAddress.fqdn --output tsv)
 echo ""
-echo "======================================================================"
-echo " [6/6] PROVISIONAMENTO CONCLUIDO!"
-echo "======================================================================"
-echo ""
-echo "  Resource Group : $RESOURCE_GROUP"
-echo "  VM             : $VM_NAME"
-echo "  IP Público     : $VM_PUBLIC_IP"
-echo "  PRÓXIMO PASSO  : ssh $ADMIN_USER@$VM_PUBLIC_IP"
-echo "  Depois         : git clone <seu-repo> app && cd app && docker compose up -d --build"
-echo "  SSH            : ssh $ADMIN_USER@$VM_PUBLIC_IP"
-echo ""
-echo "======================================================================"
-echo " LEMBRETE: Ao finalizar a apresentacao, execute o script de limpeza:"
-echo "   az group delete --name $RESOURCE_GROUP --yes --no-wait"
-echo "======================================================================"
+echo "===================================================================="
+echo "Deploy concluído."
+echo "Swagger:      http://$FQDN:8080/swagger"
+echo "Health check: http://$FQDN:8080/health"
+echo "===================================================================="

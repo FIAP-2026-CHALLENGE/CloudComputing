@@ -1,7 +1,8 @@
-﻿using DotNet.Api.Data;
+using DotNet.Api.Excecoes;
+using DotNet.Api.Infraestrutura.Observabilidade;
 using DotNet.Api.Models;
+using DotNet.Api.Servicos;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace DotNet.Api.Controllers;
 
@@ -10,22 +11,20 @@ namespace DotNet.Api.Controllers;
 [Produces("application/json")]
 public class ResponsaveisController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly IResponsavelServico _servico;
+    private readonly ILogger<ResponsaveisController> _logger;
 
-    public ResponsaveisController(AppDbContext context)
+    public ResponsaveisController(IResponsavelServico servico, ILogger<ResponsaveisController> logger)
     {
-        _context = context;
+        _servico = servico;
+        _logger = logger;
     }
 
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<Responsavel>), 200)]
     public async Task<ActionResult<IEnumerable<Responsavel>>> GetAll()
     {
-        var responsaveis = await _context.Responsaveis
-            .AsNoTracking()
-            .ToListAsync();
-
-        return Ok(responsaveis);
+        return Ok(await _servico.ListarAsync());
     }
 
     [HttpGet("{id:int}")]
@@ -33,16 +32,14 @@ public class ResponsaveisController : ControllerBase
     [ProducesResponseType(404)]
     public async Task<ActionResult<Responsavel>> GetById(int id)
     {
-        var responsavel = await _context.Responsaveis
-            .AsNoTracking()
-            .FirstOrDefaultAsync(t => t.Id == id);
-
-        if (responsavel is null)
+        try
         {
-            return NotFound();
+            return Ok(await _servico.ObterPorIdAsync(id));
         }
-
-        return Ok(responsavel);
+        catch (RecursoNaoEncontradoException ex)
+        {
+            return NotFound(ex.Message);
+        }
     }
 
     [HttpGet("cpf/{cpf}")]
@@ -50,16 +47,14 @@ public class ResponsaveisController : ControllerBase
     [ProducesResponseType(404)]
     public async Task<ActionResult<Responsavel>> GetByCpf(string cpf)
     {
-        var responsavel = await _context.Responsaveis
-            .AsNoTracking()
-            .FirstOrDefaultAsync(t => t.Cpf == cpf);
-
-        if (responsavel is null)
+        try
         {
-            return NotFound();
+            return Ok(await _servico.ObterPorCpfAsync(cpf));
         }
-
-        return Ok(responsavel);
+        catch (RecursoNaoEncontradoException ex)
+        {
+            return NotFound(ex.Message);
+        }
     }
 
     [HttpPost]
@@ -67,71 +62,59 @@ public class ResponsaveisController : ControllerBase
     [ProducesResponseType(400)]
     public async Task<ActionResult<Responsavel>> Create(Responsavel responsavel)
     {
-        if (string.IsNullOrWhiteSpace(responsavel.Name) ||
-            string.IsNullOrWhiteSpace(responsavel.Email) ||
-            string.IsNullOrWhiteSpace(responsavel.Phone) ||
-            string.IsNullOrWhiteSpace(responsavel.Cpf))
+        using var activity = AplicacaoMetricas.ActivitySource.StartActivity("CriarResponsavel");
+        activity?.SetTag("responsavel.cpf", responsavel.Cpf);
+
+        try
         {
-            return BadRequest("Name, email, phone and CPF are required.");
+            var criado = await _servico.CriarAsync(responsavel.Name, responsavel.Email, responsavel.Phone, responsavel.Cpf);
+
+            AplicacaoMetricas.CadastrosRealizados.Add(1,
+                new KeyValuePair<string, object?>("recurso", "responsavel"),
+                new KeyValuePair<string, object?>("status", "sucesso"));
+
+            _logger.LogInformation("Responsavel {ResponsavelId} criado com sucesso (CPF {Cpf}).", criado.Id, criado.Cpf);
+
+            return CreatedAtAction(nameof(GetById), new { id = criado.Id }, criado);
         }
-
-        var cpfAlreadyExists = await _context.Responsaveis
-            .CountAsync(t => t.Cpf == responsavel.Cpf) > 0;
-
-        if (cpfAlreadyExists)
+        catch (Exception ex) when (ex is ArgumentException or RegraDeNegocioException)
         {
-            return BadRequest("CPF already registered.");
+            AplicacaoMetricas.CadastrosRealizados.Add(1,
+                new KeyValuePair<string, object?>("recurso", "responsavel"),
+                new KeyValuePair<string, object?>("status", "falha"));
+
+            _logger.LogWarning(ex, "Falha ao criar Responsavel: {Motivo}", ex.Message);
+
+            return BadRequest(ex.Message);
         }
-
-        responsavel.Id = 0;
-        responsavel.CreatedAt = DateTime.UtcNow;
-        responsavel.IsActive = true;
-
-        _context.Responsaveis.Add(responsavel);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(GetById), new { id = responsavel.Id }, responsavel);
     }
 
     [HttpPut("{id:int}")]
     [ProducesResponseType(204)]
     [ProducesResponseType(400)]
     [ProducesResponseType(404)]
-    public async Task<IActionResult> Update(int id, Responsavel responsavelAtualizado)
+    public async Task<IActionResult> Update(int id, Responsavel updatedResponsavel)
     {
-        var responsavel = await _context.Responsaveis
-            .FirstOrDefaultAsync(t => t.Id == id);
-
-        if (responsavel is null)
+        try
         {
-            return NotFound();
-        }
+            await _servico.AtualizarAsync(
+                id, updatedResponsavel.Name, updatedResponsavel.Email,
+                updatedResponsavel.Phone, updatedResponsavel.Cpf, updatedResponsavel.IsActive);
 
-        if (string.IsNullOrWhiteSpace(responsavelAtualizado.Name) ||
-            string.IsNullOrWhiteSpace(responsavelAtualizado.Email) ||
-            string.IsNullOrWhiteSpace(responsavelAtualizado.Phone) ||
-            string.IsNullOrWhiteSpace(responsavelAtualizado.Cpf))
+            _logger.LogInformation("Responsavel {ResponsavelId} atualizado com sucesso.", id);
+
+            return NoContent();
+        }
+        catch (RecursoNaoEncontradoException ex)
         {
-            return BadRequest("Name, email, phone and CPF are required.");
+            return NotFound(ex.Message);
         }
-
-        var cpfAlreadyExists = await _context.Responsaveis
-            .CountAsync(t => t.Cpf == responsavelAtualizado.Cpf && t.Id != id) > 0;
-
-        if (cpfAlreadyExists)
+        catch (Exception ex) when (ex is ArgumentException or RegraDeNegocioException)
         {
-            return BadRequest("CPF already registered by another responsável.");
+            _logger.LogWarning(ex, "Falha ao atualizar Responsavel {ResponsavelId}: {Motivo}", id, ex.Message);
+
+            return BadRequest(ex.Message);
         }
-
-        responsavel.Name = responsavelAtualizado.Name;
-        responsavel.Email = responsavelAtualizado.Email;
-        responsavel.Phone = responsavelAtualizado.Phone;
-        responsavel.Cpf = responsavelAtualizado.Cpf;
-        responsavel.IsActive = responsavelAtualizado.IsActive;
-
-        await _context.SaveChangesAsync();
-
-        return NoContent();
     }
 
     [HttpDelete("{id:int}")]
@@ -139,30 +122,17 @@ public class ResponsaveisController : ControllerBase
     [ProducesResponseType(404)]
     public async Task<IActionResult> Delete(int id)
     {
-        var responsavel = await _context.Responsaveis
-            .FirstOrDefaultAsync(t => t.Id == id);
-
-        if (responsavel is null)
+        try
         {
-            return NotFound();
+            await _servico.RemoverAsync(id);
+
+            _logger.LogInformation("Responsavel {ResponsavelId} removido com sucesso.", id);
+
+            return NoContent();
         }
-
-        // Remove CareEvents e Animais vinculados antes de remover o responsavel
-        var animais = await _context.Animais
-            .Where(p => p.ResponsavelId == id)
-            .ToListAsync();
-
-        var animalIds = animais.Select(p => p.Id).ToList();
-
-        var careEvents = await _context.CareEvents
-            .Where(e => animalIds.Contains(e.AnimalId))
-            .ToListAsync();
-
-        _context.CareEvents.RemoveRange(careEvents);
-        _context.Animais.RemoveRange(animais);
-        _context.Responsaveis.Remove(responsavel);
-        await _context.SaveChangesAsync();
-
-        return NoContent();
-    }   
+        catch (RecursoNaoEncontradoException ex)
+        {
+            return NotFound(ex.Message);
+        }
+    }
 }

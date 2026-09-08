@@ -1,7 +1,8 @@
-﻿using DotNet.Api.Data;
+﻿using DotNet.Api.Excecoes;
+using DotNet.Api.Infraestrutura.Observabilidade;
 using DotNet.Api.Models;
+using DotNet.Api.Servicos;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace DotNet.Api.Controllers;
 
@@ -10,51 +11,20 @@ namespace DotNet.Api.Controllers;
 [Produces("application/json")]
 public class CareEventsController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly ICareEventServico _servico;
+    private readonly ILogger<CareEventsController> _logger;
 
-    private static readonly string[] AllowedTypes =
+    public CareEventsController(ICareEventServico servico, ILogger<CareEventsController> logger)
     {
-        "VACCINE",
-        "DEWORMING",
-        "MEDICATION",
-        "CHECKUP",
-        "RETURN",
-        "EXAM",
-        "GROOMING",
-        "SURGERY",
-        "OTHER"
-    };
-
-    private static readonly string[] AllowedStatuses =
-    {
-        "PENDING",
-        "COMPLETED",
-        "OVERDUE",
-        "CANCELED"
-    };
-
-    private static readonly string[] AllowedPriorities =
-    {
-        "LOW",
-        "MEDIUM",
-        "HIGH",
-        "CRITICAL"
-    };
-
-    public CareEventsController(AppDbContext context)
-    {
-        _context = context;
+        _servico = servico;
+        _logger = logger;
     }
 
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<CareEvent>), 200)]
     public async Task<ActionResult<IEnumerable<CareEvent>>> GetAll()
     {
-        var events = await _context.CareEvents
-            .AsNoTracking()
-            .ToListAsync();
-
-        return Ok(events);
+        return Ok(await _servico.ListarAsync());
     }
 
     [HttpGet("{id:int}")]
@@ -62,16 +32,14 @@ public class CareEventsController : ControllerBase
     [ProducesResponseType(404)]
     public async Task<ActionResult<CareEvent>> GetById(int id)
     {
-        var careEvent = await _context.CareEvents
-            .AsNoTracking()
-            .FirstOrDefaultAsync(e => e.Id == id);
-
-        if (careEvent is null)
+        try
         {
-            return NotFound();
+            return Ok(await _servico.ObterPorIdAsync(id));
         }
-
-        return Ok(careEvent);
+        catch (RecursoNaoEncontradoException ex)
+        {
+            return NotFound(ex.Message);
+        }
     }
 
     [HttpGet("animal/{animalId:int}")]
@@ -79,20 +47,14 @@ public class CareEventsController : ControllerBase
     [ProducesResponseType(404)]
     public async Task<ActionResult<IEnumerable<CareEvent>>> GetByAnimalId(int animalId)
     {
-        var animalExists = await _context.Animais
-            .CountAsync(p => p.Id == animalId) > 0;
-
-        if (!animalExists)
+        try
         {
-            return NotFound("Animal not found.");
+            return Ok(await _servico.ListarPorAnimalIdAsync(animalId));
         }
-
-        var events = await _context.CareEvents
-            .AsNoTracking()
-            .Where(e => e.AnimalId == animalId)
-            .ToListAsync();
-
-        return Ok(events);
+        catch (RecursoNaoEncontradoException ex)
+        {
+            return NotFound(ex.Message);
+        }
     }
 
     [HttpGet("status/{status}")]
@@ -100,19 +62,14 @@ public class CareEventsController : ControllerBase
     [ProducesResponseType(400)]
     public async Task<ActionResult<IEnumerable<CareEvent>>> GetByStatus(string status)
     {
-        var normalizedStatus = status.ToUpper();
-
-        if (!AllowedStatuses.Contains(normalizedStatus))
+        try
         {
-            return BadRequest("Status must be PENDING, COMPLETED, OVERDUE or CANCELED.");
+            return Ok(await _servico.ListarPorStatusAsync(status));
         }
-
-        var events = await _context.CareEvents
-            .AsNoTracking()
-            .Where(e => e.Status == normalizedStatus)
-            .ToListAsync();
-
-        return Ok(events);
+        catch (RegraDeNegocioException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpGet("type/{type}")]
@@ -120,19 +77,14 @@ public class CareEventsController : ControllerBase
     [ProducesResponseType(400)]
     public async Task<ActionResult<IEnumerable<CareEvent>>> GetByType(string type)
     {
-        var normalizedType = type.ToUpper();
-
-        if (!AllowedTypes.Contains(normalizedType))
+        try
         {
-            return BadRequest("Invalid care event type.");
+            return Ok(await _servico.ListarPorTypeAsync(type));
         }
-
-        var events = await _context.CareEvents
-            .AsNoTracking()
-            .Where(e => e.Type == normalizedType)
-            .ToListAsync();
-
-        return Ok(events);
+        catch (RegraDeNegocioException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpGet("animal/{animalId:int}/status/{status}")]
@@ -141,45 +93,25 @@ public class CareEventsController : ControllerBase
     [ProducesResponseType(404)]
     public async Task<ActionResult<IEnumerable<CareEvent>>> GetByAnimalIdAndStatus(int animalId, string status)
     {
-        var animalExists = await _context.Animais
-            .CountAsync(p => p.Id == animalId) > 0;
-
-        if (!animalExists)
+        try
         {
-            return NotFound("Animal not found.");
+            return Ok(await _servico.ListarPorAnimalIdEStatusAsync(animalId, status));
         }
-
-        var normalizedStatus = status.ToUpper();
-
-        if (!AllowedStatuses.Contains(normalizedStatus))
+        catch (RecursoNaoEncontradoException ex)
         {
-            return BadRequest("Status must be PENDING, COMPLETED, OVERDUE or CANCELED.");
+            return NotFound(ex.Message);
         }
-
-        var events = await _context.CareEvents
-            .AsNoTracking()
-            .Where(e => e.AnimalId == animalId && e.Status == normalizedStatus)
-            .ToListAsync();
-
-        return Ok(events);
+        catch (RegraDeNegocioException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpGet("overdue")]
     [ProducesResponseType(typeof(IEnumerable<CareEvent>), 200)]
     public async Task<ActionResult<IEnumerable<CareEvent>>> GetOverdue()
     {
-        var today = DateTime.UtcNow.Date;
-
-        var events = await _context.CareEvents
-            .AsNoTracking()
-            .Where(e =>
-                e.Status == "OVERDUE" ||
-                e.ScheduledDate.Date < today &&
-                e.Status != "COMPLETED" &&
-                e.Status != "CANCELED")
-            .ToListAsync();
-
-        return Ok(events);
+        return Ok(await _servico.ListarAtrasadosAsync());
     }
 
     [HttpPost]
@@ -187,32 +119,37 @@ public class CareEventsController : ControllerBase
     [ProducesResponseType(400)]
     public async Task<ActionResult<CareEvent>> Create(CareEvent careEvent)
     {
-        var animalExists = await _context.Animais
-            .CountAsync(p => p.Id == careEvent.AnimalId) > 0;
+        using var activity = AplicacaoMetricas.ActivitySource.StartActivity("CriarCareEvent");
+        activity?.SetTag("careEvent.petId", careEvent.PetId);
+        activity?.SetTag("careEvent.type", careEvent.Type);
 
-        if (!animalExists)
+        try
         {
-            return BadRequest("AnimalId does not exist.");
+            var criado = await _servico.CriarAsync(
+                careEvent.PetId, careEvent.Type, careEvent.Title, careEvent.Description,
+                careEvent.ScheduledDate, careEvent.CompletedDate, careEvent.Status,
+                careEvent.Priority, careEvent.Notes);
+
+            AplicacaoMetricas.CadastrosRealizados.Add(1,
+                new KeyValuePair<string, object?>("recurso", "care_event"),
+                new KeyValuePair<string, object?>("status", "sucesso"));
+
+            _logger.LogInformation(
+                "CareEvent {CareEventId} ({Tipo}) criado com sucesso para Animal {AnimalId}.",
+                criado.Id, criado.Type, criado.PetId);
+
+            return CreatedAtAction(nameof(GetById), new { id = criado.Id }, criado);
         }
-
-        var validationError = ValidateCareEvent(careEvent);
-
-        if (validationError is not null)
+        catch (Exception ex) when (ex is ArgumentException or RegraDeNegocioException)
         {
-            return BadRequest(validationError);
+            AplicacaoMetricas.CadastrosRealizados.Add(1,
+                new KeyValuePair<string, object?>("recurso", "care_event"),
+                new KeyValuePair<string, object?>("status", "falha"));
+
+            _logger.LogWarning(ex, "Falha ao criar CareEvent: {Motivo}", ex.Message);
+
+            return BadRequest(ex.Message);
         }
-
-        careEvent.Id = 0;
-        careEvent.Type = careEvent.Type.ToUpper();
-        careEvent.Status = careEvent.Status.ToUpper();
-        careEvent.Priority = careEvent.Priority.ToUpper();
-        careEvent.CreatedAt = DateTime.UtcNow;
-        careEvent.IsActive = true;
-
-        _context.CareEvents.Add(careEvent);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(GetById), new { id = careEvent.Id }, careEvent);
     }
 
     [HttpPut("{id:int}")]
@@ -221,43 +158,27 @@ public class CareEventsController : ControllerBase
     [ProducesResponseType(404)]
     public async Task<IActionResult> Update(int id, CareEvent updatedCareEvent)
     {
-        var careEvent = await _context.CareEvents
-            .FirstOrDefaultAsync(e => e.Id == id);
-
-        if (careEvent is null)
+        try
         {
-            return NotFound();
+            await _servico.AtualizarAsync(
+                id, updatedCareEvent.PetId, updatedCareEvent.Type, updatedCareEvent.Title,
+                updatedCareEvent.Description, updatedCareEvent.ScheduledDate, updatedCareEvent.CompletedDate,
+                updatedCareEvent.Status, updatedCareEvent.Priority, updatedCareEvent.Notes, updatedCareEvent.IsActive);
+
+            _logger.LogInformation("CareEvent {CareEventId} atualizado com sucesso.", id);
+
+            return NoContent();
         }
-
-        var animalExists = await _context.Animais
-            .CountAsync(p => p.Id == updatedCareEvent.AnimalId) > 0;
-
-        if (!animalExists)
+        catch (RecursoNaoEncontradoException ex)
         {
-            return BadRequest("AnimalId does not exist.");
+            return NotFound(ex.Message);
         }
-
-        var validationError = ValidateCareEvent(updatedCareEvent);
-
-        if (validationError is not null)
+        catch (Exception ex) when (ex is ArgumentException or RegraDeNegocioException)
         {
-            return BadRequest(validationError);
+            _logger.LogWarning(ex, "Falha ao atualizar CareEvent {CareEventId}: {Motivo}", id, ex.Message);
+
+            return BadRequest(ex.Message);
         }
-
-        careEvent.AnimalId = updatedCareEvent.AnimalId;
-        careEvent.Type = updatedCareEvent.Type.ToUpper();
-        careEvent.Title = updatedCareEvent.Title;
-        careEvent.Description = updatedCareEvent.Description;
-        careEvent.ScheduledDate = updatedCareEvent.ScheduledDate;
-        careEvent.CompletedDate = updatedCareEvent.CompletedDate;
-        careEvent.Status = updatedCareEvent.Status.ToUpper();
-        careEvent.Priority = updatedCareEvent.Priority.ToUpper();
-        careEvent.Notes = updatedCareEvent.Notes;
-        careEvent.IsActive = updatedCareEvent.IsActive;
-
-        await _context.SaveChangesAsync();
-
-        return NoContent();
     }
 
     [HttpPatch("{id:int}/complete")]
@@ -266,25 +187,24 @@ public class CareEventsController : ControllerBase
     [ProducesResponseType(404)]
     public async Task<IActionResult> Complete(int id)
     {
-        var careEvent = await _context.CareEvents
-            .FirstOrDefaultAsync(e => e.Id == id);
-
-        if (careEvent is null)
+        try
         {
-            return NotFound();
-        }
+            await _servico.ConcluirAsync(id);
 
-        if (careEvent.Status == "CANCELED")
+            _logger.LogInformation("CareEvent {CareEventId} concluído com sucesso.", id);
+
+            return NoContent();
+        }
+        catch (RecursoNaoEncontradoException ex)
         {
-            return BadRequest("Canceled events cannot be completed.");
+            return NotFound(ex.Message);
         }
+        catch (RegraDeNegocioException ex)
+        {
+            _logger.LogWarning(ex, "Falha ao concluir CareEvent {CareEventId}: {Motivo}", id, ex.Message);
 
-        careEvent.Status = "COMPLETED";
-        careEvent.CompletedDate = DateTime.UtcNow;
-
-        await _context.SaveChangesAsync();
-
-        return NoContent();
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpDelete("{id:int}")]
@@ -292,60 +212,17 @@ public class CareEventsController : ControllerBase
     [ProducesResponseType(404)]
     public async Task<IActionResult> Delete(int id)
     {
-        var careEvent = await _context.CareEvents
-            .FirstOrDefaultAsync(e => e.Id == id);
-
-        if (careEvent is null)
+        try
         {
-            return NotFound();
+            await _servico.RemoverAsync(id);
+
+            _logger.LogInformation("CareEvent {CareEventId} removido com sucesso.", id);
+
+            return NoContent();
         }
-
-        _context.CareEvents.Remove(careEvent);
-        await _context.SaveChangesAsync();
-
-        return NoContent();
-    }
-
-    private static string? ValidateCareEvent(CareEvent careEvent)
-    {
-        if (careEvent.AnimalId <= 0 ||
-            string.IsNullOrWhiteSpace(careEvent.Type) ||
-            string.IsNullOrWhiteSpace(careEvent.Title) ||
-            string.IsNullOrWhiteSpace(careEvent.Status) ||
-            string.IsNullOrWhiteSpace(careEvent.Priority))
+        catch (RecursoNaoEncontradoException ex)
         {
-            return "AnimalId, type, title, status and priority are required.";
+            return NotFound(ex.Message);
         }
-
-        var normalizedType = careEvent.Type.ToUpper();
-        var normalizedStatus = careEvent.Status.ToUpper();
-        var normalizedPriority = careEvent.Priority.ToUpper();
-
-        if (!AllowedTypes.Contains(normalizedType))
-        {
-            return "Type must be VACCINE, DEWORMING, MEDICATION, CHECKUP, RETURN, EXAM, GROOMING, SURGERY or OTHER.";
-        }
-
-        if (!AllowedStatuses.Contains(normalizedStatus))
-        {
-            return "Status must be PENDING, COMPLETED, OVERDUE or CANCELED.";
-        }
-
-        if (!AllowedPriorities.Contains(normalizedPriority))
-        {
-            return "Priority must be LOW, MEDIUM, HIGH or CRITICAL.";
-        }
-
-        if (careEvent.ScheduledDate == default)
-        {
-            return "ScheduledDate is required.";
-        }
-
-        if (normalizedStatus == "COMPLETED" && careEvent.CompletedDate is null)
-        {
-            careEvent.CompletedDate = DateTime.UtcNow;
-        }
-
-        return null;
     }
 }

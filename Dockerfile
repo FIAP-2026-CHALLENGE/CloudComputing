@@ -19,6 +19,8 @@ WORKDIR /app
 
 COPY --from=build /app/publish .
 
+RUN mkdir -p /app/logs && chown -R 1654:1654 /app
+
 EXPOSE 8080
 
 ENV ASPNETCORE_URLS=http://+:8080

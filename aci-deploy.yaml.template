@@ -1,0 +1,65 @@
+apiVersion: 2021-10-01
+location: ${LOCATION}
+name: ${CONTAINER_GROUP}
+properties:
+  osType: Linux
+  restartPolicy: Always
+
+  imageRegistryCredentials:
+    - server: ${ACR_SERVER}
+      username: ${ACR_USERNAME}
+      password: ${ACR_PASSWORD}
+
+  ipAddress:
+    type: Public
+    dnsNameLabel: ${DNS_LABEL}
+    ports:
+      - protocol: tcp
+        port: 8080
+
+  volumes:
+    - name: mysql-data
+      azureFile:
+        shareName: ${FILE_SHARE}
+        storageAccountName: ${STORAGE_ACCOUNT}
+        storageAccountKey: ${STORAGE_KEY}
+
+  containers:
+    - name: cloudcomputing-mysql
+      properties:
+        image: mysql:8.0
+        ports:
+          - port: 3306
+        environmentVariables:
+          - name: MYSQL_ROOT_PASSWORD
+            secureValue: ${MYSQL_ROOT_PASSWORD}
+          - name: MYSQL_DATABASE
+            value: ${MYSQL_DATABASE}
+          - name: MYSQL_USER
+            value: ${MYSQL_USER}
+          - name: MYSQL_PASSWORD
+            secureValue: ${MYSQL_PASSWORD}
+        resources:
+          requests:
+            cpu: 1.0
+            memoryInGb: 1.5
+        volumeMounts:
+          - name: mysql-data
+            mountPath: /var/lib/mysql
+
+    - name: cloudcomputing-api
+      properties:
+        image: ${ACR_SERVER}/cloudcomputing-api:${IMAGE_TAG}
+        ports:
+          - port: 8080
+        environmentVariables:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: Production
+          - name: ASPNETCORE_URLS
+            value: http://+:8080
+          - name: ConnectionStrings__MySqlConnection
+            secureValue: "Server=localhost;Port=3306;Database=${MYSQL_DATABASE};User=${MYSQL_USER};Password=${MYSQL_PASSWORD};"
+        resources:
+          requests:
+            cpu: 1.0
+            memoryInGb: 1.5
