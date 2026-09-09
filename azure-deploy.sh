@@ -75,6 +75,14 @@ echo "==> Taggeando e enviando para o ACR..."
 docker tag cloudcomputing-api:"$IMAGE_TAG" "$ACR_SERVER/cloudcomputing-api:$IMAGE_TAG"
 docker push "$ACR_SERVER/cloudcomputing-api:$IMAGE_TAG"
 
+# Espelha a imagem do MySQL para o próprio ACR. Isso evita que o ACI dependa
+# de um pull anônimo (sem autenticação) direto do Docker Hub na hora de criar
+# o grupo de containers, o que pode falhar por limite de taxa (rate limit).
+echo "==> Espelhando imagem do MySQL para o ACR..."
+docker pull mysql:8.0
+docker tag mysql:8.0 "$ACR_SERVER/mysql:8.0"
+docker push "$ACR_SERVER/mysql:8.0"
+
 # =============================================================================
 # 4) STORAGE ACCOUNT + FILE SHARE (persistência do MySQL em nuvem)
 # =============================================================================

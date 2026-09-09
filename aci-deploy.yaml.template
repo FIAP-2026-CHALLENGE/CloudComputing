@@ -27,7 +27,7 @@ properties:
   containers:
     - name: cloudcomputing-mysql
       properties:
-        image: mysql:8.0
+        image: ${ACR_SERVER}/mysql:8.0
         ports:
           - port: 3306
         environmentVariables:
