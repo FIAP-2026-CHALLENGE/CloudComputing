@@ -42,8 +42,9 @@ az group create --name "$RESOURCE_GROUP" --location "$LOCATION" --output table
 # =============================================================================
 # 2) ACR (Azure Container Registry)
 # =============================================================================
-echo "==> Registrando provider do ACR (idempotente, não falha se já estiver registrado)..."
+echo "==> Registrando providers necessários (idempotente, não falha se já estiver registrado)..."
 az provider register --namespace Microsoft.ContainerRegistry
+az provider register --namespace Microsoft.ContainerInstance
 
 echo "==> Criando ACR..."
 az acr create \
