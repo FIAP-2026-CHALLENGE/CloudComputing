@@ -11,7 +11,7 @@ set -e
 # =============================================================================
 RM="562822"                                   # ALTERE PARA SEU RM
 RESOURCE_GROUP="rg-cloudcomputing-${RM}"
-LOCATION="canadacentral"                      # ALTERE SE SUA REGIÃO NÃO TIVER SKU DISPONÍVEL
+LOCATION="eastus2"                      # ALTERE SE SUA REGIÃO NÃO TIVER SKU DISPONÍVEL
 
 ACR_NAME="acrcloudcomputing${RM}"             # só letras/números, sem hífen
 CONTAINER_GROUP="cloudcomputing-aci-${RM}"
