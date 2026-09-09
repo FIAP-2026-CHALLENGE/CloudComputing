@@ -11,7 +11,7 @@ set -e
 # =============================================================================
 RM="562822"                                   # ALTERE PARA SEU RM
 RESOURCE_GROUP="rg-cloudcomputing-${RM}"
-LOCATION="eastus2"                      # ALTERE SE SUA REGIÃO NÃO TIVER SKU DISPONÍVEL
+LOCATION="eastus2"                            # confirmado via política sys.regionrestriction desta assinatura
 
 ACR_NAME="acrcloudcomputing${RM}"             # só letras/números, sem hífen
 CONTAINER_GROUP="cloudcomputing-aci-${RM}"
@@ -64,7 +64,8 @@ echo "ACR Server: $ACR_SERVER"
 # 3) BUILD + PUSH da imagem da API
 # =============================================================================
 echo "==> Fazendo login Docker no ACR..."
-az acr login --name "$ACR_NAME"
+ACR_TOKEN=$(az acr login --name "$ACR_NAME" --expose-token --query accessToken -o tsv)
+echo "$ACR_TOKEN" | docker login "$ACR_SERVER" --username 00000000-0000-0000-0000-000000000000 --password-stdin
 
 echo "==> Buildando a imagem da API..."
 docker build -t cloudcomputing-api:"$IMAGE_TAG" -f Dockerfile .
