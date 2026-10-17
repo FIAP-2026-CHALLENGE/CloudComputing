@@ -8,14 +8,33 @@ trigger:
     include:
       - master
 
+pr:
+  branches:
+    include:
+      - develop
+
 pool:
   vmImage: 'ubuntu-24.04'
 
-steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+variables:
+  buildConfiguration: 'Release'
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+steps:
+- task: UseDotNet@2
+  displayName: 'Instalar .NET SDK 10'
+  inputs:
+    packageType: 'sdk'
+    version: '10.0.x'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Restore (baixar pacotes NuGet)'
+  inputs:
+    command: 'restore'
+    projects: '**/*.csproj'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Build'
+  inputs:
+    command: 'build'
+    projects: '**/*.csproj'
+    arguments: '--configuration $(buildConfiguration) --no-restore'
