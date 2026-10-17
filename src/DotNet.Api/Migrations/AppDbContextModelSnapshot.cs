@@ -3,8 +3,8 @@ using System;
 using DotNet.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Oracle.EntityFrameworkCore.Metadata;
 
 #nullable disable
 
@@ -17,75 +17,75 @@ namespace DotNet.Api.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.0")
-                .HasAnnotation("Relational:MaxIdentifierLength", 64);
+                .HasAnnotation("ProductVersion", "10.0.8")
+                .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
-            MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
+            OracleModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
             modelBuilder.Entity("DotNet.Api.Models.Animal", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("NUMBER(10)")
                         .HasColumnName("ID");
 
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+                    OraclePropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("BirthDate")
-                        .HasColumnType("datetime(6)")
+                        .HasColumnType("TIMESTAMP(7)")
                         .HasColumnName("BIRTH_DATE");
 
                     b.Property<string>("Breed")
                         .IsRequired()
                         .HasMaxLength(80)
-                        .HasColumnType("varchar(80)")
+                        .HasColumnType("NVARCHAR2(80)")
                         .HasColumnName("BREED");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)")
+                        .HasColumnType("TIMESTAMP(7)")
                         .HasColumnName("CREATED_AT");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
+                    b.Property<int>("IsActive")
+                        .HasColumnType("NUMBER(1)")
                         .HasColumnName("IS_ACTIVE");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(120)
-                        .HasColumnType("varchar(120)")
+                        .HasColumnType("NVARCHAR2(120)")
                         .HasColumnName("NAME");
 
                     b.Property<string>("Nickname")
                         .IsRequired()
                         .HasMaxLength(120)
-                        .HasColumnType("varchar(120)")
+                        .HasColumnType("NVARCHAR2(120)")
                         .HasColumnName("NICKNAME");
 
                     b.Property<int>("ResponsavelId")
-                        .HasColumnType("int")
+                        .HasColumnType("NUMBER(10)")
                         .HasColumnName("RESPONSAVEL_ID");
 
                     b.Property<string>("Rga")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("varchar(30)")
+                        .HasColumnType("NVARCHAR2(30)")
                         .HasColumnName("RGA");
 
                     b.Property<string>("Sex")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("varchar(20)")
+                        .HasColumnType("NVARCHAR2(20)")
                         .HasColumnName("SEX");
 
                     b.Property<string>("Species")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("varchar(30)")
+                        .HasColumnType("NVARCHAR2(30)")
                         .HasColumnName("SPECIES");
 
                     b.Property<decimal>("Weight")
                         .HasPrecision(10, 2)
-                        .HasColumnType("decimal(10,2)")
+                        .HasColumnType("DECIMAL(10,2)")
                         .HasColumnName("WEIGHT");
 
                     b.HasKey("Id");
@@ -99,63 +99,63 @@ namespace DotNet.Api.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("NUMBER(10)")
                         .HasColumnName("ID");
 
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+                    OraclePropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime?>("CompletedDate")
-                        .HasColumnType("datetime(6)")
+                        .HasColumnType("TIMESTAMP(7)")
                         .HasColumnName("COMPLETED_DATE");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)")
+                        .HasColumnType("TIMESTAMP(7)")
                         .HasColumnName("CREATED_AT");
 
                     b.Property<string>("Description")
                         .HasMaxLength(500)
-                        .HasColumnType("varchar(500)")
+                        .HasColumnType("NVARCHAR2(500)")
                         .HasColumnName("DESCRIPTION");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
+                    b.Property<int>("IsActive")
+                        .HasColumnType("NUMBER(1)")
                         .HasColumnName("IS_ACTIVE");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(500)
-                        .HasColumnType("varchar(500)")
+                        .HasColumnType("NVARCHAR2(500)")
                         .HasColumnName("NOTES");
 
                     b.Property<int>("PetId")
-                        .HasColumnType("int")
+                        .HasColumnType("NUMBER(10)")
                         .HasColumnName("PET_ID");
 
                     b.Property<string>("Priority")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("varchar(30)")
+                        .HasColumnType("NVARCHAR2(30)")
                         .HasColumnName("PRIORITY");
 
                     b.Property<DateTime>("ScheduledDate")
-                        .HasColumnType("datetime(6)")
+                        .HasColumnType("TIMESTAMP(7)")
                         .HasColumnName("SCHEDULED_DATE");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("varchar(30)")
+                        .HasColumnType("NVARCHAR2(30)")
                         .HasColumnName("STATUS");
 
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(160)
-                        .HasColumnType("varchar(160)")
+                        .HasColumnType("NVARCHAR2(160)")
                         .HasColumnName("TITLE");
 
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(40)
-                        .HasColumnType("varchar(40)")
+                        .HasColumnType("NVARCHAR2(40)")
                         .HasColumnName("TYPE");
 
                     b.HasKey("Id");
@@ -169,41 +169,41 @@ namespace DotNet.Api.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("NUMBER(10)")
                         .HasColumnName("ID");
 
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+                    OraclePropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Cpf")
                         .IsRequired()
                         .HasMaxLength(14)
-                        .HasColumnType("varchar(14)")
+                        .HasColumnType("NVARCHAR2(14)")
                         .HasColumnName("CPF");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)")
+                        .HasColumnType("TIMESTAMP(7)")
                         .HasColumnName("CREATED_AT");
 
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(160)
-                        .HasColumnType("varchar(160)")
+                        .HasColumnType("NVARCHAR2(160)")
                         .HasColumnName("EMAIL");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
+                    b.Property<int>("IsActive")
+                        .HasColumnType("NUMBER(1)")
                         .HasColumnName("IS_ACTIVE");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(120)
-                        .HasColumnType("varchar(120)")
+                        .HasColumnType("NVARCHAR2(120)")
                         .HasColumnName("NAME");
 
                     b.Property<string>("Phone")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("varchar(20)")
+                        .HasColumnType("NVARCHAR2(20)")
                         .HasColumnName("PHONE");
 
                     b.HasKey("Id");
