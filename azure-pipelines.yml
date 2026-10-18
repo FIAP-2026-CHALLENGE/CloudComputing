@@ -17,7 +17,15 @@ pool:
   vmImage: 'ubuntu-24.04'
 
 variables:
-  buildConfiguration: 'Release'
+  - group: vg-sprint4
+  - name: buildConfiguration
+    value: 'Release'
+  - name: acrName
+    value: 'acrsprint4rm562822'
+  - name: acrLoginServer
+    value: 'acrsprint4rm562822.azurecr.io'
+  - name: imageRepository
+    value: 'cloudcomputing-api'
 
 stages:
 - stage: CI
@@ -67,3 +75,17 @@ stages:
         targetPath: '$(Build.ArtifactStagingDirectory)'
         artifact: 'drop'
         publishLocation: 'pipeline'
+
+        
+    - task: AzureCLI@2
+      displayName: 'Docker build e push para o ACR (só na master)'
+      condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+      inputs:
+        azureSubscription: 'sc-azure-sprint4'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az acr login --name $(acrName)
+          docker build -t $(acrLoginServer)/$(imageRepository):$(Build.BuildId) -t $(acrLoginServer)/$(imageRepository):latest .
+          docker push $(acrLoginServer)/$(imageRepository):$(Build.BuildId)
+          docker push $(acrLoginServer)/$(imageRepository):latest
