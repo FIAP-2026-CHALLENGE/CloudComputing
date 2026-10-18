@@ -26,6 +26,14 @@ variables:
     value: 'acrsprint4rm562822.azurecr.io'
   - name: imageRepository
     value: 'cloudcomputing-api'
+  - name: resourceGroup
+    value: 'rg-sprint4-rm562822'
+  - name: aciName
+    value: 'aci-cloudcomputing-rm562822'
+  - name: aciDnsLabel
+    value: 'cloudcomputing-rm562822'
+  - name: location
+    value: 'eastus2'
 
 stages:
 - stage: CI
@@ -75,8 +83,7 @@ stages:
         targetPath: '$(Build.ArtifactStagingDirectory)'
         artifact: 'drop'
         publishLocation: 'pipeline'
-
-        
+  
     - task: AzureCLI@2
       displayName: 'Docker build e push para o ACR (só na master)'
       condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
@@ -89,3 +96,46 @@ stages:
           docker build -t $(acrLoginServer)/$(imageRepository):$(Build.BuildId) -t $(acrLoginServer)/$(imageRepository):latest .
           docker push $(acrLoginServer)/$(imageRepository):$(Build.BuildId)
           docker push $(acrLoginServer)/$(imageRepository):latest
+
+- stage: CD
+  displayName: 'CD - Deploy no ACI'
+  dependsOn: CI
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+  jobs:
+  - deployment: DeployACI
+    displayName: 'Criar ou atualizar o container no ACI'
+    environment: 'aci-producao'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureCLI@2
+            displayName: 'Deploy do container no ACI'
+            env:
+              ORACLE_CONN: $(ORACLE_CONNECTION)
+            inputs:
+              azureSubscription: 'sc-azure-sprint4'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                ACR_USER=$(az acr credential show --name $(acrName) --query username -o tsv)
+                ACR_PASS=$(az acr credential show --name $(acrName) --query "passwords[0].value" -o tsv)
+
+                az container create \
+                  --resource-group $(resourceGroup) \
+                  --name $(aciName) \
+                  --image $(acrLoginServer)/$(imageRepository):$(Build.BuildId) \
+                  --registry-login-server $(acrLoginServer) \
+                  --registry-username "$ACR_USER" \
+                  --registry-password "$ACR_PASS" \
+                  --os-type Linux \
+                  --cpu 1 \
+                  --memory 1.5 \
+                  --ports 8080 \
+                  --ip-address Public \
+                  --dns-name-label $(aciDnsLabel) \
+                  --location $(location) \
+                  --restart-policy Always \
+                  --secure-environment-variables ConnectionStrings__OracleConnection="$ORACLE_CONN"
+
+                az container show --resource-group $(resourceGroup) --name $(aciName) --query "{url:ipAddress.fqdn, estado:instanceView.state}" -o table
