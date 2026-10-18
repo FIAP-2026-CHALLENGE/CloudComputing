@@ -55,6 +55,8 @@ public class AppDbContext : DbContext
 
             entity.Property(r => r.IsActive)
                 .HasColumnName("IS_ACTIVE")
+                .HasColumnType("NUMBER(1)")
+                .HasConversion<int>()
                 .IsRequired();
         });
 
@@ -112,8 +114,10 @@ public class AppDbContext : DbContext
                 .HasColumnName("CREATED_AT")
                 .IsRequired();
 
-           entity.Property(a => a.IsActive)
+            entity.Property(a => a.IsActive)
                 .HasColumnName("IS_ACTIVE")
+                .HasColumnType("NUMBER(1)")
+                .HasConversion<int>()
                 .IsRequired();
 
             // FK: Animal → Responsavel
@@ -177,6 +181,8 @@ public class AppDbContext : DbContext
 
             entity.Property(e => e.IsActive)
                 .HasColumnName("IS_ACTIVE")
+                .HasColumnType("NUMBER(1)")
+                .HasConversion<int>()
                 .IsRequired();
 
             // FK: CareEvent → Animal

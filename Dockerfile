@@ -2,16 +2,9 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 
 WORKDIR /src
 
-COPY ["src/DotNet.Api/DotNet.Api.csproj", "DotNet.Api/"]
+COPY src/ ./src/
 
-RUN dotnet restore "DotNet.Api/DotNet.Api.csproj"
-
-COPY src/DotNet.Api/ DotNet.Api/
-
-WORKDIR /src/DotNet.Api
-
-RUN dotnet publish "DotNet.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
+RUN dotnet publish "src/DotNet.Api/DotNet.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 
