@@ -17,31 +17,75 @@ pool:
   vmImage: 'ubuntu-24.04'
 
 variables:
-  buildConfiguration: 'Release'
+  - group: vg-sprint4
+  - name: buildConfiguration
+    value: 'Release'
+  - name: acrName
+    value: 'acrsprint4rm562822'
+  - name: acrLoginServer
+    value: 'acrsprint4rm562822.azurecr.io'
+  - name: imageRepository
+    value: 'cloudcomputing-api'
 
-steps:
-- task: UseDotNet@2
-  displayName: 'Instalar .NET SDK 10'
-  inputs:
-    packageType: 'sdk'
-    version: '10.0.x'
+stages:
+- stage: CI
+  displayName: 'CI - Build, Testes e Artefato'
+  jobs:
+  - job: Build
+    displayName: 'Compilar, testar e publicar'
+    steps:
+    - task: UseDotNet@2
+      displayName: 'Instalar .NET SDK 10'
+      inputs:
+        packageType: 'sdk'
+        version: '10.0.x'
 
-- task: DotNetCoreCLI@2
-  displayName: 'Restore (baixar pacotes NuGet)'
-  inputs:
-    command: 'restore'
-    projects: '**/*.csproj'
+    - task: DotNetCoreCLI@2
+      displayName: 'Restore (baixar pacotes NuGet)'
+      inputs:
+        command: 'restore'
+        projects: '**/*.csproj'
 
-- task: DotNetCoreCLI@2
-  displayName: 'Build'
-  inputs:
-    command: 'build'
-    projects: '**/*.csproj'
-    arguments: '--configuration $(buildConfiguration) --no-restore'
+    - task: DotNetCoreCLI@2
+      displayName: 'Build'
+      inputs:
+        command: 'build'
+        projects: '**/*.csproj'
+        arguments: '--configuration $(buildConfiguration) --no-restore'
 
-- task: DotNetCoreCLI@2
-  displayName: 'Testes automáticos (xUnit)'
-  inputs:
-    command: 'test'
-    projects: '**/*Tests.csproj'
-    arguments: '--configuration $(buildConfiguration) --no-build'
+    - task: DotNetCoreCLI@2
+      displayName: 'Testes automáticos (xUnit)'
+      inputs:
+        command: 'test'
+        projects: '**/*Tests.csproj'
+        arguments: '--configuration $(buildConfiguration) --no-build'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Publish (gera os binários da API)'
+      inputs:
+        command: 'publish'
+        publishWebProjects: false
+        projects: 'src/DotNet.Api/DotNet.Api.csproj'
+        arguments: '--configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)/api'
+        zipAfterPublish: true
+
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publicar artefato (drop)'
+      inputs:
+        targetPath: '$(Build.ArtifactStagingDirectory)'
+        artifact: 'drop'
+        publishLocation: 'pipeline'
+
+        
+    - task: AzureCLI@2
+      displayName: 'Docker build e push para o ACR (só na master)'
+      condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+      inputs:
+        azureSubscription: 'sc-azure-sprint4'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az acr login --name $(acrName)
+          docker build -t $(acrLoginServer)/$(imageRepository):$(Build.BuildId) -t $(acrLoginServer)/$(imageRepository):latest .
+          docker push $(acrLoginServer)/$(imageRepository):$(Build.BuildId)
+          docker push $(acrLoginServer)/$(imageRepository):latest
