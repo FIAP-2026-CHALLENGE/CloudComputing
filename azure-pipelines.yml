@@ -19,29 +19,51 @@ pool:
 variables:
   buildConfiguration: 'Release'
 
-steps:
-- task: UseDotNet@2
-  displayName: 'Instalar .NET SDK 10'
-  inputs:
-    packageType: 'sdk'
-    version: '10.0.x'
+stages:
+- stage: CI
+  displayName: 'CI - Build, Testes e Artefato'
+  jobs:
+  - job: Build
+    displayName: 'Compilar, testar e publicar'
+    steps:
+    - task: UseDotNet@2
+      displayName: 'Instalar .NET SDK 10'
+      inputs:
+        packageType: 'sdk'
+        version: '10.0.x'
 
-- task: DotNetCoreCLI@2
-  displayName: 'Restore (baixar pacotes NuGet)'
-  inputs:
-    command: 'restore'
-    projects: '**/*.csproj'
+    - task: DotNetCoreCLI@2
+      displayName: 'Restore (baixar pacotes NuGet)'
+      inputs:
+        command: 'restore'
+        projects: '**/*.csproj'
 
-- task: DotNetCoreCLI@2
-  displayName: 'Build'
-  inputs:
-    command: 'build'
-    projects: '**/*.csproj'
-    arguments: '--configuration $(buildConfiguration) --no-restore'
+    - task: DotNetCoreCLI@2
+      displayName: 'Build'
+      inputs:
+        command: 'build'
+        projects: '**/*.csproj'
+        arguments: '--configuration $(buildConfiguration) --no-restore'
 
-- task: DotNetCoreCLI@2
-  displayName: 'Testes automáticos (xUnit)'
-  inputs:
-    command: 'test'
-    projects: '**/*Tests.csproj'
-    arguments: '--configuration $(buildConfiguration) --no-build'
+    - task: DotNetCoreCLI@2
+      displayName: 'Testes automáticos (xUnit)'
+      inputs:
+        command: 'test'
+        projects: '**/*Tests.csproj'
+        arguments: '--configuration $(buildConfiguration) --no-build'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Publish (gera os binários da API)'
+      inputs:
+        command: 'publish'
+        publishWebProjects: false
+        projects: 'src/DotNet.Api/DotNet.Api.csproj'
+        arguments: '--configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)/api'
+        zipAfterPublish: true
+
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publicar artefato (drop)'
+      inputs:
+        targetPath: '$(Build.ArtifactStagingDirectory)'
+        artifact: 'drop'
+        publishLocation: 'pipeline'
