@@ -6,7 +6,7 @@
 trigger:
   branches:
     include:
-      - master
+      - main
 
 pr:
   branches:
@@ -85,8 +85,8 @@ stages:
         publishLocation: 'pipeline'
   
     - task: AzureCLI@2
-      displayName: 'Docker build e push para o ACR (só na master)'
-      condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+      displayName: 'Docker build e push para o ACR (só na main)'
+      condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
       inputs:
         azureSubscription: 'sc-azure-sprint4'
         scriptType: 'bash'
@@ -100,7 +100,7 @@ stages:
 - stage: CD
   displayName: 'CD - Deploy no ACI'
   dependsOn: CI
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
   jobs:
   - deployment: DeployACI
     displayName: 'Criar ou atualizar o container no ACI'
