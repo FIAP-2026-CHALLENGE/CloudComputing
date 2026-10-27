@@ -1,11 +1,14 @@
-using DotNet.Api.Excecoes;
+using Microsoft.AspNetCore.Authorization;
 using DotNet.Api.Infraestrutura.Observabilidade;
-using DotNet.Api.Models;
-using DotNet.Api.Servicos;
+using DotNet.Application.Dtos;
+using DotNet.Application.Servicos;
 using Microsoft.AspNetCore.Mvc;
+using DotNet.Domain.Consultas;
+using DotNet.Api.Hateoas;
 
 namespace DotNet.Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/animais")]
 [Produces("application/json")]
@@ -21,135 +24,68 @@ public class AnimaisController : ControllerBase
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<Animal>), 200)]
-    public async Task<ActionResult<IEnumerable<Animal>>> GetAll()
+    [ProducesResponseType(typeof(ColecaoPaginada<Recurso<AnimalResponse>>), 200)]
+    [ProducesResponseType(404)]
+    public async Task<ActionResult<ColecaoPaginada<Recurso<AnimalResponse>>>> GetAll(
+        [FromQuery] FiltroAnimal filtro,
+        [FromQuery] ParametrosPaginacao paginacao)
     {
-        return Ok(await _servico.ListarAsync());
+        var resultado = (await _servico.ListarAsync(filtro, paginacao)).Mapear(ComLinks);
+
+        return Ok(ColecaoPaginada<Recurso<AnimalResponse>>.De(resultado, LinksPaginacao.Criar(Request, resultado)));
     }
 
     [HttpGet("{id:int}")]
-    [ProducesResponseType(typeof(Animal), 200)]
+    [ProducesResponseType(typeof(Recurso<AnimalResponse>), 200)]
     [ProducesResponseType(404)]
-    public async Task<ActionResult<Animal>> GetById(int id)
+    public async Task<ActionResult<Recurso<AnimalResponse>>> GetById(int id)
     {
-        try
-        {
-            return Ok(await _servico.ObterPorIdAsync(id));
-        }
-        catch (RecursoNaoEncontradoException ex)
-        {
-            return NotFound(ex.Message);
-        }
-    }
-
-    [HttpGet("responsavel/{responsavelId:int}")]
-    [ProducesResponseType(typeof(IEnumerable<Animal>), 200)]
-    [ProducesResponseType(404)]
-    public async Task<ActionResult<IEnumerable<Animal>>> GetByResponsavelId(int responsavelId)
-    {
-        try
-        {
-            return Ok(await _servico.ListarPorResponsavelIdAsync(responsavelId));
-        }
-        catch (RecursoNaoEncontradoException ex)
-        {
-            return NotFound(ex.Message);
-        }
-    }
-
-    [HttpGet("species/{species}")]
-    [ProducesResponseType(typeof(IEnumerable<Animal>), 200)]
-    public async Task<ActionResult<IEnumerable<Animal>>> GetBySpecies(string species)
-    {
-        return Ok(await _servico.ListarPorSpeciesAsync(species));
-    }
-
-    [HttpGet("breed/{breed}")]
-    [ProducesResponseType(typeof(IEnumerable<Animal>), 200)]
-    public async Task<ActionResult<IEnumerable<Animal>>> GetByBreed(string breed)
-    {
-        return Ok(await _servico.ListarPorBreedAsync(breed));
+        return Ok(ComLinks(await _servico.ObterPorIdAsync(id)));
     }
 
     [HttpGet("rga/{rga}")]
-    [ProducesResponseType(typeof(Animal), 200)]
+    [ProducesResponseType(typeof(AnimalResponse), 200)]
     [ProducesResponseType(404)]
-    public async Task<ActionResult<Animal>> GetByRga(string rga)
+    public async Task<ActionResult<AnimalResponse>> GetByRga(string rga)
     {
-        try
-        {
-            return Ok(await _servico.ObterPorRgaAsync(rga));
-        }
-        catch (RecursoNaoEncontradoException ex)
-        {
-            return NotFound(ex.Message);
-        }
+        return Ok(await _servico.ObterPorRgaAsync(rga));
     }
 
     [HttpPost]
-    [ProducesResponseType(typeof(Animal), 201)]
+    [ProducesResponseType(typeof(AnimalResponse), 201)]
     [ProducesResponseType(400)]
-    public async Task<ActionResult<Animal>> Create(Animal animal)
+    public async Task<ActionResult<AnimalResponse>> Create(CriarAnimalRequest request)
     {
         using var activity = AplicacaoMetricas.ActivitySource.StartActivity("CriarAnimal");
-        activity?.SetTag("animal.responsavelId", animal.ResponsavelId);
-        activity?.SetTag("animal.species", animal.Species);
+        activity?.SetTag("animal.responsavelId", request.ResponsavelId);
+        activity?.SetTag("animal.species", request.Species);
 
-        try
-        {
-            var criado = await _servico.CriarAsync(
-                animal.ResponsavelId, animal.Name, animal.Nickname, animal.Species,
-                animal.Breed, animal.BirthDate, animal.Weight, animal.Sex, animal.Rga);
+        HttpContext.Items["recurso"] = "animal";
 
-            AplicacaoMetricas.CadastrosRealizados.Add(1,
-                new KeyValuePair<string, object?>("recurso", "animal"),
-                new KeyValuePair<string, object?>("status", "sucesso"));
+        var criado = await _servico.CriarAsync(request);
 
-            _logger.LogInformation(
-                "Animal {AnimalId} ({Nome}) criado com sucesso para Responsavel {ResponsavelId}.",
-                criado.Id, criado.Name, criado.ResponsavelId);
+        AplicacaoMetricas.CadastrosRealizados.Add(1,
+            new KeyValuePair<string, object?>("recurso", "animal"),
+            new KeyValuePair<string, object?>("status", "sucesso"));
 
-            return CreatedAtAction(nameof(GetById), new { id = criado.Id }, criado);
-        }
-        catch (Exception ex) when (ex is ArgumentException or RegraDeNegocioException)
-        {
-            AplicacaoMetricas.CadastrosRealizados.Add(1,
-                new KeyValuePair<string, object?>("recurso", "animal"),
-                new KeyValuePair<string, object?>("status", "falha"));
+        _logger.LogInformation(
+            "Animal {AnimalId} ({Nome}) criado com sucesso para Responsavel {ResponsavelId}.",
+            criado.Id, criado.Name, criado.ResponsavelId);
 
-            _logger.LogWarning(ex, "Falha ao criar Animal: {Motivo}", ex.Message);
-
-            return BadRequest(ex.Message);
-        }
+        return CreatedAtAction(nameof(GetById), new { id = criado.Id }, criado);
     }
 
     [HttpPut("{id:int}")]
     [ProducesResponseType(204)]
     [ProducesResponseType(400)]
     [ProducesResponseType(404)]
-    public async Task<IActionResult> Update(int id, Animal updatedAnimal)
+    public async Task<IActionResult> Update(int id, AtualizarAnimalRequest request)
     {
-        try
-        {
-            await _servico.AtualizarAsync(
-                id, updatedAnimal.ResponsavelId, updatedAnimal.Name, updatedAnimal.Nickname,
-                updatedAnimal.Species, updatedAnimal.Breed, updatedAnimal.BirthDate,
-                updatedAnimal.Weight, updatedAnimal.Sex, updatedAnimal.Rga, updatedAnimal.IsActive);
+        await _servico.AtualizarAsync(id, request);
 
-            _logger.LogInformation("Animal {AnimalId} atualizado com sucesso.", id);
+        _logger.LogInformation("Animal {AnimalId} atualizado com sucesso.", id);
 
-            return NoContent();
-        }
-        catch (RecursoNaoEncontradoException ex)
-        {
-            return NotFound(ex.Message);
-        }
-        catch (Exception ex) when (ex is ArgumentException or RegraDeNegocioException)
-        {
-            _logger.LogWarning(ex, "Falha ao atualizar Animal {AnimalId}: {Motivo}", id, ex.Message);
-
-            return BadRequest(ex.Message);
-        }
+        return NoContent();
     }
 
     [HttpDelete("{id:int}")]
@@ -157,17 +93,24 @@ public class AnimaisController : ControllerBase
     [ProducesResponseType(404)]
     public async Task<IActionResult> Delete(int id)
     {
-        try
-        {
-            await _servico.RemoverAsync(id);
+        await _servico.RemoverAsync(id);
 
-            _logger.LogInformation("Animal {AnimalId} removido com sucesso.", id);
+        _logger.LogInformation("Animal {AnimalId} removido com sucesso.", id);
 
-            return NoContent();
-        }
-        catch (RecursoNaoEncontradoException ex)
-        {
-            return NotFound(ex.Message);
-        }
+        return NoContent();
+    }
+
+    private Recurso<AnimalResponse> ComLinks(AnimalResponse animal)
+    {
+        var self = Url.Action(nameof(GetById), new { id = animal.Id })!;
+
+        return new Recurso<AnimalResponse>(animal,
+        [
+            new("self", self, "GET"),
+            new("update", self, "PUT"),
+            new("delete", self, "DELETE"),
+            new("responsavel", Url.Action("GetById", "Responsaveis", new { id = animal.ResponsavelId })!, "GET"),
+            new("care-events", Url.Action("GetAll", "CareEvents", new { animalId = animal.Id })!, "GET")
+        ]);
     }
 }

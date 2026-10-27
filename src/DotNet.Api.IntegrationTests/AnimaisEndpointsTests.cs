@@ -1,6 +1,6 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
-using DotNet.Api.Models;
+using DotNet.Application.Dtos;
 using FluentAssertions;
 using Xunit;
 
@@ -13,7 +13,7 @@ public class AnimaisEndpointsTests
 
     public AnimaisEndpointsTests(CustomWebApplicationFactory factory)
     {
-        _client = factory.CreateClient();
+        _client = factory.CriarClienteAutenticado();
     }
 
     [Fact]
@@ -34,7 +34,7 @@ public class AnimaisEndpointsTests
         // Assert
         responsavelResponse.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        var responsavelCriado = await responsavelResponse.Content.ReadFromJsonAsync<Responsavel>();
+        var responsavelCriado = await responsavelResponse.Content.ReadFromJsonAsync<ResponsavelResponse>();
         responsavelCriado.Should().NotBeNull();
 
         // Act — cria o animal vinculado ao responsável recém-criado
@@ -56,7 +56,7 @@ public class AnimaisEndpointsTests
         // Assert
         animalResponse.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        var animalCriado = await animalResponse.Content.ReadFromJsonAsync<Animal>();
+        var animalCriado = await animalResponse.Content.ReadFromJsonAsync<AnimalResponse>();
         animalCriado!.ResponsavelId.Should().Be(responsavelCriado.Id);
     }
 

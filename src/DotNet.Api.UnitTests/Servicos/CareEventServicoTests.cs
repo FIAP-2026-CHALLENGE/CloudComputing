@@ -1,10 +1,12 @@
-﻿using DotNet.Api.Excecoes;
-using DotNet.Api.Models;
-using DotNet.Api.Repositorios;
-using DotNet.Api.Servicos;
+﻿using DotNet.Application.Dtos;
+using DotNet.Domain.Excecoes;
+using DotNet.Domain.Entidades;
+using DotNet.Domain.Repositorios;
+using DotNet.Application.Servicos;
 using FluentAssertions;
 using Moq;
 using Xunit;
+using DotNet.Domain.Consultas;
 
 namespace DotNet.Api.UnitTests.Servicos;
 
@@ -30,8 +32,7 @@ public class CareEventServicoTests
         _animalRepositorioMock.Setup(r => r.ExisteAsync(1)).ReturnsAsync(true);
 
         // Act
-        var careEvent = await _servico.CriarAsync(
-            1, "CHECKUP", "Check-up", "Descrição", ScheduledDate, null, "PENDING", "HIGH", null);
+        var careEvent = await _servico.CriarAsync(new CriarCareEventRequest(1, "CHECKUP", "Check-up", ScheduledDate, "PENDING", "HIGH", "Descrição"));
 
         // Assert
         careEvent.Type.Should().Be("CHECKUP");
@@ -45,8 +46,7 @@ public class CareEventServicoTests
         _animalRepositorioMock.Setup(r => r.ExisteAsync(99)).ReturnsAsync(false);
 
         // Act
-        Func<Task> act = async () => await _servico.CriarAsync(
-            99, "CHECKUP", "Check-up", "Descrição", ScheduledDate, null, "PENDING", "HIGH", null);
+        Func<Task> act = async () => await _servico.CriarAsync(new CriarCareEventRequest(99, "CHECKUP", "Check-up", ScheduledDate, "PENDING", "HIGH", "Descrição"));
 
         // Assert
         await act.Should().ThrowAsync<RegraDeNegocioException>();
@@ -88,12 +88,130 @@ public class CareEventServicoTests
     }
 
     [Fact]
-    public async Task ListarPorStatusAsync_ComStatusInvalido_DeveLancarRegraDeNegocioException()
+    public async Task ListarAsync_ComStatusInvalido_DeveLancarRegraDeNegocioException()
     {
         // Act
-        Func<Task> act = async () => await _servico.ListarPorStatusAsync("INEXISTENTE");
+        Func<Task> act = async () => await _servico.ListarAsync(new FiltroCareEvent(Status: "INEXISTENTE"), new ParametrosPaginacao());
 
         // Assert
         await act.Should().ThrowAsync<RegraDeNegocioException>();
+    }
+
+    private static CareEvent CriarEventoPendente() =>
+        CareEvent.Criar(1, "CHECKUP", "Check-up", "Descrição", ScheduledDate, null, "PENDING", "HIGH", null);
+
+    private static AtualizarCareEventRequest RequestDeAtualizacao(int petId = 1) =>
+        new(petId, "VACCINE", "Vacina anual", ScheduledDate, "PENDING", "MEDIUM", "Dose anual");
+
+    [Fact]
+    public async Task ObterPorIdAsync_ComEventoExistente_DeveRetornarResponse()
+    {
+        // Arrange
+        _careEventRepositorioMock.Setup(r => r.ObterPorIdAsync(1)).ReturnsAsync(CriarEventoPendente());
+
+        // Act
+        var careEvent = await _servico.ObterPorIdAsync(1);
+
+        // Assert
+        careEvent.Title.Should().Be("Check-up");
+    }
+
+    [Fact]
+    public async Task ObterPorIdAsync_ComEventoInexistente_DeveLancarRecursoNaoEncontradoException()
+    {
+        // Arrange
+        _careEventRepositorioMock.Setup(r => r.ObterPorIdAsync(99)).ReturnsAsync((CareEvent?)null);
+
+        // Act
+        Func<Task> act = async () => await _servico.ObterPorIdAsync(99);
+
+        // Assert
+        await act.Should().ThrowAsync<RecursoNaoEncontradoException>();
+    }
+
+    [Fact]
+    public async Task AtualizarAsync_ComDadosValidos_DeveAlterarEventoESalvar()
+    {
+        // Arrange
+        var careEvent = CriarEventoPendente();
+        _careEventRepositorioMock.Setup(r => r.ObterPorIdAsync(1)).ReturnsAsync(careEvent);
+        _animalRepositorioMock.Setup(r => r.ExisteAsync(1)).ReturnsAsync(true);
+
+        // Act
+        await _servico.AtualizarAsync(1, RequestDeAtualizacao());
+
+        // Assert
+        careEvent.Type.Should().Be("VACCINE");
+        _careEventRepositorioMock.Verify(r => r.SalvarAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task AtualizarAsync_ComEventoInexistente_DeveLancarRecursoNaoEncontradoExceptionENaoDeveSalvar()
+    {
+        // Arrange
+        _careEventRepositorioMock.Setup(r => r.ObterPorIdAsync(99)).ReturnsAsync((CareEvent?)null);
+
+        // Act
+        Func<Task> act = async () => await _servico.AtualizarAsync(99, RequestDeAtualizacao());
+
+        // Assert
+        await act.Should().ThrowAsync<RecursoNaoEncontradoException>();
+        _careEventRepositorioMock.Verify(r => r.SalvarAsync(), Times.Never);
+    }
+
+    [Fact]
+    public async Task AtualizarAsync_ComAnimalInexistente_DeveLancarRegraDeNegocioExceptionENaoDeveSalvar()
+    {
+        // Arrange
+        _careEventRepositorioMock.Setup(r => r.ObterPorIdAsync(1)).ReturnsAsync(CriarEventoPendente());
+        _animalRepositorioMock.Setup(r => r.ExisteAsync(99)).ReturnsAsync(false);
+
+        // Act
+        Func<Task> act = async () => await _servico.AtualizarAsync(1, RequestDeAtualizacao(petId: 99));
+
+        // Assert
+        await act.Should().ThrowAsync<RegraDeNegocioException>();
+        _careEventRepositorioMock.Verify(r => r.SalvarAsync(), Times.Never);
+    }
+
+    [Fact]
+    public async Task ConcluirAsync_ComEventoInexistente_DeveLancarRecursoNaoEncontradoException()
+    {
+        // Arrange
+        _careEventRepositorioMock.Setup(r => r.ObterPorIdAsync(99)).ReturnsAsync((CareEvent?)null);
+
+        // Act
+        Func<Task> act = async () => await _servico.ConcluirAsync(99);
+
+        // Assert
+        await act.Should().ThrowAsync<RecursoNaoEncontradoException>();
+    }
+
+    [Fact]
+    public async Task RemoverAsync_ComEventoExistente_DeveChamarRemoverNoRepositorioUmaVez()
+    {
+        // Arrange
+        var careEvent = CriarEventoPendente();
+        _careEventRepositorioMock.Setup(r => r.ObterPorIdAsync(1)).ReturnsAsync(careEvent);
+
+        // Act
+        await _servico.RemoverAsync(1);
+
+        // Assert
+        _careEventRepositorioMock.Verify(r => r.RemoverAsync(careEvent), Times.Once);
+    }
+
+    [Fact]
+    public async Task RemoverAsync_ComEventoInexistente_DeveLancarRecursoNaoEncontradoExceptionENaoDeveRemover()
+    {
+        // Arrange
+        _careEventRepositorioMock.Setup(r => r.ObterPorIdAsync(99)).ReturnsAsync((CareEvent?)null);
+
+        // Act
+        Func<Task> act = async () => await _servico.RemoverAsync(99);
+
+        // Assert
+        await act.Should().ThrowAsync<RecursoNaoEncontradoException>();
+        _careEventRepositorioMock.Verify(r => r.RemoverAsync(It.IsAny<CareEvent>()), Times.Never);
     }
 }
