@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using DotNet.Api.Aplicacao;
 using DotNet.Api.Hateoas;
 using FluentAssertions;
@@ -73,6 +74,19 @@ public class MongoDesligadoTests
         // Assert
         raiz!.Links.Should().NotContain(l => l.Rel == "relatos" || l.Rel == "health-mongo");
         raiz.Links.Should().Contain(l => l.Rel == "animais");
+    }
+
+    [Fact]
+    public async Task Swagger_SemMongo_NaoDeveExibirRotasNemDescricaoDoMongo()
+    {
+        // Act
+        var documento = await _factory.CreateClient().GetFromJsonAsync<JsonElement>("/swagger/v1/swagger.json");
+
+        // Assert
+        var rotas = documento.GetProperty("paths").EnumerateObject().Select(p => p.Name).ToList();
+        rotas.Should().NotContain(r => r.StartsWith("/api/relatos"));
+        rotas.Should().Contain("/api/animais");
+        documento.GetProperty("info").GetProperty("description").GetString().Should().NotContainEquivalentOf("mongo");
     }
 
     [Fact]

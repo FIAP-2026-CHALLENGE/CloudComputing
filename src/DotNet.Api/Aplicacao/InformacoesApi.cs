@@ -11,8 +11,8 @@ public static class InformacoesApi
     public const string Versao = "1.0.0";
 
     public const string Descricao =
-        "Monitoramento e cuidado de cães e gatos: responsáveis, animais e eventos de cuidado no Oracle, " +
-        "e relatos do tutor no MongoDB.";
+        "Monitoramento e cuidado de cães e gatos: responsáveis, animais e eventos de cuidado, " +
+        "persistidos no Oracle.";
 }
 
 public record InformacoesApiResponse(string Nome, string Versao, string Ambiente);

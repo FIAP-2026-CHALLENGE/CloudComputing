@@ -56,6 +56,11 @@ try
         {
             [new OpenApiSecuritySchemeReference("bearer", document)] = []
         });
+
+        // Sem MongoDB (deploy de Cloud), as rotas de relatos não aparecem no Swagger.
+        var mongoHabilitado = MongoConfiguracao.EstaHabilitado(builder.Configuration);
+        options.DocInclusionPredicate((_, api) =>
+            mongoHabilitado || api.ActionDescriptor.RouteValues["controller"] != "Relatos");
     });
 
     builder.Services.AddInfrastructure(builder.Configuration);
