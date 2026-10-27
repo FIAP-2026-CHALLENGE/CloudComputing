@@ -113,11 +113,28 @@ stages:
             displayName: 'Deploy do container no ACI'
             env:
               ORACLE_CONN: $(ORACLE_CONNECTION)
+              JWT_KEY: $(JWT_KEY)
+              AUTH_USUARIO: $(AUTH_USUARIO)
+              AUTH_SENHA: $(AUTH_SENHA)
             inputs:
               azureSubscription: 'sc-azure-sprint4'
               scriptType: 'bash'
               scriptLocation: 'inlineScript'
               inlineScript: |
+                # Para antes do deploy se algum secret não chegou do vg-sprint4:
+                # sem Jwt__Key (32+ caracteres) a API não sobe e o container reinicia em loop.
+                for NOME in ORACLE_CONN JWT_KEY AUTH_USUARIO AUTH_SENHA; do
+                  VALOR="${!NOME}"
+                  if [ -z "$VALOR" ] || [[ "$VALOR" == '$('* ]]; then
+                    echo "##vso[task.logissue type=error]Secret $NOME ausente no variable group vg-sprint4."
+                    exit 1
+                  fi
+                done
+                if [ ${#JWT_KEY} -lt 32 ]; then
+                  echo "##vso[task.logissue type=error]JWT_KEY precisa ter 32 caracteres ou mais."
+                  exit 1
+                fi
+
                 ACR_USER=$(az acr credential show --name $(acrName) --query username -o tsv)
                 ACR_PASS=$(az acr credential show --name $(acrName) --query "passwords[0].value" -o tsv)
 
@@ -136,6 +153,11 @@ stages:
                   --dns-name-label $(aciDnsLabel) \
                   --location $(location) \
                   --restart-policy Always \
-                  --secure-environment-variables ConnectionStrings__OracleConnection="$ORACLE_CONN"
+                  --environment-variables Swagger__Habilitado=true \
+                  --secure-environment-variables \
+                    ConnectionStrings__OracleConnection="$ORACLE_CONN" \
+                    Jwt__Key="$JWT_KEY" \
+                    Auth__Usuario="$AUTH_USUARIO" \
+                    Auth__Senha="$AUTH_SENHA"
 
                 az container show --resource-group $(resourceGroup) --name $(aciName) --query "{url:ipAddress.fqdn, estado:instanceView.state}" -o table
