@@ -45,5 +45,8 @@ public class InfoEndpointsTests
         var info = documento.GetProperty("info");
         info.GetProperty("title").GetString().Should().Be(InformacoesApi.Nome);
         info.GetProperty("version").GetString().Should().Be(InformacoesApi.Versao);
+
+        // Com o MongoDB configurado, as rotas de relatos continuam documentadas.
+        documento.GetProperty("paths").EnumerateObject().Should().Contain(p => p.Name == "/api/relatos");
     }
 }
