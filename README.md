@@ -1,202 +1,164 @@
-# 🐾 PetCare API — Cloud Computing (Sprint 3)
+# CLYVO VET API — CI/CD na Azure (Sprint 4)
 
-API REST para gestão de saúde animal, desenvolvida em .NET 10, containerizada com Docker e implantada na Azure via **Azure Container Registry (ACR) + Azure Container Instances (ACI)**, com banco de dados **MySQL 8.0** também containerizado.
+Entrega da Sprint 4 de **DevOps Tools & Cloud Computing** (Challenge FIAP 2026). A API REST do CLYVO VET, em .NET 10, é compilada, testada e publicada por um pipeline YAML no **Azure DevOps** (CI) e implantada automaticamente no **Azure Container Instances** (CD), com banco **Oracle da FIAP**.
 
-> Este projeto reaproveita a base de código evoluída na disciplina de Advanced Business Development with .NET (arquitetura em camadas, observabilidade com Serilog/OpenTelemetry), adaptada aqui para banco de dados MySQL e infraestrutura ACR+ACI, conforme permitido pelo enunciado da Sprint 3 de DevOps Tools & Cloud Computing.
+## Integrantes
 
----
+| RM | Nome | Turma |
+|---|---|---|
+| RM562145 | Ana Carolina Pereira Fontes | 2TDSPV |
+| RM563409 | João Victor Nascimento Adão | 2TDSPX |
+| RM566516 | Johnny Dias Mathias Junior | 2TDSPX |
+| RM563403 | Luisa Ganasevici de Abreu | 2TDSPV |
+| RM562822 | Matheus Moya de Oliveira | 2TDSPV |
 
-## Descrição da Solução
+## Descrição da solução
 
-O **PetCare API** é um sistema de gestão de cuidados veterinários que permite:
+O CLYVO VET apoia o monitoramento e o cuidado de cães e gatos. A API permite cadastrar **responsáveis** (tutores), **animais** vinculados a eles e **eventos de cuidado** (vacinas, consultas, medicações, exames), com CRUD completo, autenticação JWT, paginação com HATEOAS e documentação no Swagger. Os dados ficam no Oracle da FIAP.
 
-- Cadastrar **Responsáveis** (tutores dos animais)
-- Cadastrar **Animais**, vinculados a um Responsável
-- Registrar **Eventos de Cuidado** (vacinas, consultas, exames, medicações, cirurgias etc.), vinculados a um Animal
-
-As três entidades são relacionadas entre si (`Responsavel` → `Animal` → `CareEvent`) e formam o núcleo (CORE) da aplicação, com CRUD completo exposto via API REST documentada em Swagger.
-
-## Benefícios para o Negócio
-
-- **Centralização de dados**: histórico completo de saúde de cada animal acessível em qualquer lugar, sem depender de planilhas ou papel
-- **Rastreabilidade**: cada evento de cuidado tem tipo, status (pendente/concluído/atrasado/cancelado) e prioridade, permitindo priorizar atendimentos
-- **Escalabilidade**: arquitetura em containers (ACR + ACI) permite subir novas instâncias sob demanda, sem depender de uma VM fixa
-- **Redução de custo operacional**: toda a infraestrutura é criada e destruída via script (`azure-deploy.sh` / `azure-destroy.sh`), evitando recursos ociosos cobrando na assinatura
-- **Segurança**: o container da API roda com usuário sem privilégios administrativos (`USER 1654`), e nenhuma credencial fica exposta no código-fonte versionado
-- **Observabilidade**: logs estruturados (Serilog) e métricas/tracing (OpenTelemetry) já embutidos, facilitando diagnóstico em produção
-
----
-
-## Diagrama de Arquitetura
-
-![Arquitetura da solução](docs/architecture-diagram.png)
-
-Um **Resource Group** na Azure agrupa três recursos: o **ACR** (onde a imagem Docker da API é armazenada), a **Storage Account** (que fornece um File Share para persistência dos dados do MySQL) e o **Container Group (ACI)**, que executa dois containers na mesma rede interna — a API .NET e o MySQL 8.0. O código-fonte no GitHub é buildado e enviado ao ACR via `docker push`. O cliente acessa a API publicamente pela porta 8080; internamente, a API se conecta ao MySQL via `localhost:3306`, já que os dois containers compartilham a mesma interface de rede dentro do grupo ACI. O MySQL persiste seus dados no File Share, para que nada se perca caso o container reinicie.
-
----
-
-## Banco de Dados em Nuvem
-
-- **Motor**: MySQL 8.0, containerizado, rodando junto com a API no mesmo grupo ACI
-- **DDL completo** (tabelas, colunas, chaves primária/estrangeira e comentários): [`script_bd.sql`](script_bd.sql)
-- **Tabelas CORE**: `T_CP_RESPONSAVEIS`, `T_CP_ANIMAIS`, `T_CP_CARE_EVENTS` — relacionadas entre si (Animal referencia Responsavel; CareEvent referencia Animal)
-- **Massa inicial**: a aplicação insere automaticamente 2 registros em cada tabela no primeiro start (ver `Program.cs`), atendendo à exigência de conteúdo significativo mínimo
-
----
+Cada mudança de código que chega à branch `main` dispara o pipeline: o CI compila, roda os testes automáticos, publica o artefato e envia a imagem Docker ao Azure Container Registry; o CD cria ou atualiza o container no Azure Container Instances com essa imagem, entregando a API numa URL pública.
 
 ## Stack
 
-- **.NET 10** / ASP.NET Core Web API
-- **Entity Framework Core 9** + **Pomelo.EntityFrameworkCore.MySql** (provider MySQL)
-- **MySQL 8.0** (Docker)
-- **Serilog** (log estruturado, console + arquivo) e **OpenTelemetry** (tracing/métricas)
-- **Docker** / **Docker Compose** (ambiente local)
-- **Azure CLI**, **ACR**, **ACI**, **Storage Account** (infraestrutura em nuvem)
+| Camada | Tecnologia |
+|---|---|
+| API | .NET 10, ASP.NET Core Web API, Clean Architecture (Domain, Application, Infrastructure, Api) |
+| Dados | Oracle da FIAP, EF Core 10 (`Oracle.EntityFrameworkCore`) |
+| Segurança | JWT Bearer; segredos no variable group do Azure DevOps |
+| Testes | xUnit, Moq, FluentAssertions, EF Core InMemory e `WebApplicationFactory` (136 testes) |
+| Observabilidade | Serilog, OpenTelemetry, health check `/health` |
+| Container | Docker multi-stage (`sdk:10.0` → `aspnet:10.0`), usuário não root |
+| CI/CD | Azure DevOps Pipelines (YAML), Environment `aci-producao` |
+| Nuvem | Azure Container Registry (Basic) e Azure Container Instances |
+| Código | GitHub (Git Flow: `feature/*` → `develop` → `main`) |
 
----
+## Arquitetura e fluxo CI/CD
 
-## Estrutura do Repositório
+![Arquitetura da CLYVO VET API na Azure, com o fluxo CI/CD numerado](docs/arquitetura.png)
 
-```
-CloudComputing/
-├── src/DotNet.Api/            # Código-fonte da API (.NET 10)
-│   ├── Controllers/           # Endpoints REST
-│   ├── Servicos/              # Regras de negócio
-│   ├── Repositorios/          # Acesso a dados (EF Core)
-│   ├── Models/                # Entidades de domínio
-│   ├── Data/                  # AppDbContext + AppDbContextFactory (design-time)
-│   ├── Migrations/            # Migrations do EF Core (já geradas para MySQL)
-│   └── Infraestrutura/        # Health check e observabilidade
+O desenho é gerado a partir de [`docs/arquitetura.html`](docs/arquitetura.html), com os ícones oficiais da Microsoft ([Azure Architecture Icons](https://learn.microsoft.com/azure/architecture/icons/)).
+
+| # | Etapa | Onde atua |
+|---|---|---|
+| 1 | O desenvolvedor faz o merge de uma mudança de código na `main` | GitHub |
+| 2 | O `trigger: main` inicia o pipeline automaticamente | Azure Pipelines |
+| 3 | **CI:** restore, build e testes automáticos (xUnit) | Agente `ubuntu-24.04` |
+| 4 | **CI:** `dotnet publish` e publicação do artefato `drop` | Azure Pipelines (Artifacts da run) |
+| 5 | **CI:** `docker build` e `push` da imagem com a tag do BuildId | Azure Container Registry |
+| 6 | **CD:** o deployment job lê os segredos do variable group `vg-sprint4` | Azure DevOps (Library + Environment `aci-producao`) |
+| 7 | **CD:** `az container create` cria ou atualiza o container com a imagem nova | Azure Container Instances |
+| 8 | O usuário final acessa a API (Swagger) pela URL pública, porta 8080 | Navegador / Postman |
+| 9 | A API grava e consulta os dados no banco | Oracle da FIAP (EF Core) |
+
+PRs para a `develop` também rodam o CI (validação), sem deploy.
+
+## Pipeline (`azure-pipelines.yml`)
+
+| Stage | Etapas | Quando roda |
+|---|---|---|
+| **CI** — Build, Testes e Artefato | .NET SDK 10 → restore → build → testes → publish → artefato `drop` → Docker build e push no ACR | Commits na `main` e PRs para a `develop` (o push no ACR só na `main`) |
+| **CD** — Deploy no ACI | Confere os segredos → busca a credencial do ACR → `az container create` com a imagem da run → mostra URL e estado | Só na `main`, depois do CI verde |
+
+O CD para com erro **antes** do deploy se algum segredo não chegar ou se a chave JWT tiver menos de 32 caracteres; assim um container quebrado nunca substitui o que está no ar.
+
+## Banco de dados
+
+Oracle da FIAP, acessado pela connection string `ConnectionStrings__OracleConnection`. As tabelas são criadas pelas migrations do EF Core (`src/DotNet.Infrastructure/Migrations`):
+
+| Tabela | Conteúdo |
+|---|---|
+| `T_CP_RESPONSAVEIS` | Tutores (nome, e-mail, telefone, CPF) |
+| `T_CP_ANIMAIS` | Animais, ligados a um responsável |
+| `T_CP_CARE_EVENTS` | Eventos de cuidado, ligados a um animal |
+
+## Variáveis e segredos
+
+Nenhum segredo fica no repositório. Todos estão no variable group **`vg-sprint4`** do Azure DevOps, marcados como secret, e chegam ao container como variáveis seguras do ACI (não aparecem no portal):
+
+| Variable group | Variável no container | Para quê |
+|---|---|---|
+| `ORACLE_CONNECTION` | `ConnectionStrings__OracleConnection` | Conexão com o Oracle |
+| `JWT_KEY` | `Jwt__Key` | Assinatura dos tokens (32+ caracteres) |
+| `AUTH_USUARIO` / `AUTH_SENHA` | `Auth__Usuario` / `Auth__Senha` | Credenciais do login |
+| — | `Swagger__Habilitado=true` | Expõe o Swagger no ACI (não é segredo) |
+
+A credencial do ACR é buscada na hora do deploy com `az acr credential show`, sem ficar guardada.
+
+## Estrutura do repositório
+
+```text
+.
+├── azure-pipelines.yml        Pipeline CI/CD (stages CI e CD)
+├── Dockerfile                 Imagem da API (multi-stage, usuário não root)
+├── .dockerignore
 ├── docs/
-│   └── architecture-diagram.png
-├── Dockerfile                 # Build multi-stage da API (roda como usuário 1654, não-root)
-├── docker-compose.yml         # Ambiente local: API + MySQL
-├── .env.example               # Modelo de variáveis de ambiente (sem credenciais reais)
-├── script_bd.sql              # DDL das tabelas com comentários
-├── aci-deploy.yaml.template   # Template do grupo de containers ACI
-├── azure-deploy.sh            # Provisiona ACR + ACI via Azure CLI
-└── azure-destroy.sh           # Remove todos os recursos criados
+│   ├── arquitetura.html       Fonte do diagrama
+│   └── arquitetura.png        Diagrama de arquitetura e fluxo CI/CD
+└── src/
+    ├── DotNet.Api.slnx
+    ├── DotNet.Domain/          Entidades, exceções e interfaces dos repositórios
+    ├── DotNet.Application/     Serviços e DTOs
+    ├── DotNet.Infrastructure/  EF Core (Oracle), migrations, JWT e health checks
+    ├── DotNet.Api/             Controllers, middlewares, HATEOAS e Program.cs
+    ├── DotNet.Api.UnitTests/
+    └── DotNet.Api.IntegrationTests/
 ```
 
----
+## Como executar
 
-## Pré-requisitos
+### Pré-requisitos
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (com backend WSL2, se Windows)
-- [.NET 10 SDK](https://dotnet.microsoft.com/download) (apenas para rodar `dotnet ef` localmente, se necessário)
-- [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) autenticado (`az login`)
-- `envsubst` (já vem com Git Bash/WSL/Linux/macOS)
-- Uma conta Azure ativa (ex: Azure for Students)
+- .NET SDK 10
+- Docker
+- Azure CLI (`az`), para conferir os recursos
 
----
-
-## Como Executar — Validação Local
-
-Esta etapa sobe a aplicação localmente via Docker Compose, para validar antes de ir para a nuvem.
-
-### 1. Clonar o repositório
+### 1. Testes
 
 ```bash
-git clone https://github.com/FIAP-2026-CHALLENGE/CloudComputing.git
-cd CloudComputing
+dotnet test src/DotNet.Api.slnx
 ```
 
-### 2. Configurar as variáveis de ambiente
+### 2. Imagem Docker local
 
 ```bash
-cp .env.example .env
+docker build -t cloudcomputing-api .
+docker run --rm -p 8080:8080 \
+  -e ConnectionStrings__OracleConnection="<connection string do Oracle>" \
+  -e Jwt__Key="<chave com 32+ caracteres>" \
+  -e Auth__Usuario="<usuario>" -e Auth__Senha="<senha>" \
+  -e Swagger__Habilitado=true \
+  cloudcomputing-api
 ```
 
-Edite o `.env` e defina valores para `MYSQL_ROOT_PASSWORD`, `MYSQL_DATABASE`, `MYSQL_USER` e `MYSQL_PASSWORD`.
+Swagger em `http://localhost:8080/swagger` e health check em `http://localhost:8080/health`.
 
-### 3. Subir os containers
+### 3. Deploy pelo pipeline
+
+1. No Azure DevOps, ter a service connection `sc-azure-sprint4`, o variable group `vg-sprint4` (com os segredos da tabela acima) e o Environment `aci-producao`.
+2. Fazer o merge de uma mudança de código na `main` (`feature/*` → `develop` → `main`).
+3. Acompanhar a run em Pipelines; ao fim do CD, conferir:
 
 ```bash
-docker compose up -d --build
+az container show -g rg-sprint4-rm562822 -n aci-cloudcomputing-rm562822 \
+  --query "{estado:instanceView.state, imagem:containers[0].image}" -o table
+curl http://cloudcomputing-rm562822.eastus2.azurecontainer.io:8080/health
 ```
 
-### 4. Validar
+## Endpoints principais
 
-- Swagger: [http://localhost:8081/swagger](http://localhost:8081/swagger)
-- Health check: [http://localhost:8081/health](http://localhost:8081/health)
+Login em `POST /api/auth/login`; as demais rotas, exceto `/` e `/health`, exigem `Authorization: Bearer <token>`.
 
-O primeiro start aplica as migrations e insere a massa de dados inicial automaticamente (ver logs com `docker logs cloudcomputing-api`).
+| Recurso | Rotas |
+|---|---|
+| Raiz | `GET /` (nome, versão e links) |
+| Responsáveis | `GET/POST /api/responsaveis` · `GET/PUT/DELETE /api/responsaveis/{id}` · `GET /api/responsaveis/cpf/{cpf}` |
+| Animais | `GET/POST /api/animais` · `GET/PUT/DELETE /api/animais/{id}` · `GET /api/animais/rga/{rga}` |
+| Eventos de cuidado | `GET/POST /api/care-events` · `GET/PUT/DELETE /api/care-events/{id}` · `PATCH /api/care-events/{id}/complete` |
+| Saúde | `GET /health` (conexão com o Oracle) |
 
----
+## Segurança
 
-## Como Executar — Deploy na Nuvem (ACR + ACI)
-
-> ⚠️ Esta é a etapa que deve ser demonstrada no vídeo — a correção não aceita testes em `localhost`.
-
-### 1. Autenticar na Azure
-
-```bash
-az login
-```
-
-### 2. Conferir as variáveis do script
-
-Abra `azure-deploy.sh` e confirme `RM` e `LOCATION` no topo do arquivo.
-
-### 3. Executar o deploy
-
-```bash
-chmod +x azure-deploy.sh azure-destroy.sh
-./azure-deploy.sh
-```
-
-O script executa, nesta ordem:
-
-```bash
-az group create --name $RESOURCE_GROUP --location $LOCATION
-az acr create --resource-group $RESOURCE_GROUP --name $ACR_NAME --sku Basic --admin-enabled true
-az acr login --name $ACR_NAME
-docker build -t cloudcomputing-api:v1 -f Dockerfile .
-docker tag cloudcomputing-api:v1 $ACR_SERVER/cloudcomputing-api:v1
-docker push $ACR_SERVER/cloudcomputing-api:v1
-az storage account create --name $STORAGE_ACCOUNT --resource-group $RESOURCE_GROUP --sku Standard_LRS
-az storage share create --name $FILE_SHARE --account-name $STORAGE_ACCOUNT --account-key $STORAGE_KEY
-envsubst < aci-deploy.yaml.template > aci-deploy.yaml
-az container create --resource-group $RESOURCE_GROUP --file aci-deploy.yaml
-```
-
-Ao final, o script imprime a URL pública do Swagger e do `/health`.
-
-### 4. Validar na nuvem
-
-- Swagger: `http://<dns-label>.<region>.azurecontainer.io:8080/swagger`
-- Health check: `http://<dns-label>.<region>.azurecontainer.io:8080/health`
-
-### 5. Validar o CRUD diretamente no banco (evidência exigida no vídeo)
-
-Para cada operação de escrita (Create, Update, Delete) feita via Swagger, confirme diretamente no MySQL:
-
-```bash
-az container exec --resource-group $RESOURCE_GROUP --name $CONTAINER_GROUP --container-name cloudcomputing-mysql --exec-command "//bin/bash"
-mysql -u root -p"$MYSQL_ROOT_PASSWORD" petcare -e "SELECT * FROM T_CP_RESPONSAVEIS;"
-```
-
-> Nota Windows/Git Bash: se `az container exec` falhar com erro de path (`exec: "C:/Program"...`), use `"//bin/bash"` (barra dupla) em vez de `"/bin/bash"` — é uma conversão automática de path do MSYS/Git Bash.
-
----
-
-## Como Destruir os Recursos
-
-```bash
-./azure-destroy.sh
-```
-
-O script lista os recursos do Resource Group, pede confirmação explícita, e então remove tudo (ACR, ACI, Storage Account) via:
-
-```bash
-az group delete --name $RESOURCE_GROUP --yes --no-wait
-```
-
----
-
-## Notas de Segurança
-
-- Nenhuma credencial está commitada no código-fonte. `appsettings.json` mantém a connection string vazia; o valor real é injetado via variável de ambiente (`ConnectionStrings__MySqlConnection`), lida do `.env` (local) ou gerada dinamicamente no `aci-deploy.yaml` (nuvem), nunca versionado.
-- `.env` está no `.gitignore` — apenas o `.env.example` (com valores fictícios) é versionado.
-- O container da API roda como usuário não-root (`USER 1654` no `Dockerfile`), atendendo à exigência de não rodar com privilégio administrativo.
-- No `aci-deploy.yaml`, as senhas do MySQL usam `secureValue` (não `value`), impedindo que apareçam em texto plano em logs ou no `az container show`.
+- Nenhuma credencial versionada: segredos só no variable group, como secret.
+- Segredos chegam ao container por `--secure-environment-variables`.
+- Container roda com usuário sem privilégios (`USER 1654`).
+- O `.gitignore` cobre `.env`, `bin/`, `obj/` e logs.
