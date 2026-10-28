@@ -1,7 +1,11 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
+# CLYVO VET API - pipeline CI/CD da Sprint 4 (Azure DevOps)
+#
+# CI: restore, build, testes automáticos, publish do artefato "drop" e,
+#     na main, docker build e push da imagem para o Azure Container Registry.
+# CD: só na main, depois do CI verde; cria ou atualiza o container no
+#     Azure Container Instances com a imagem da run e os segredos do vg-sprint4.
+#
+# Dispara a cada commit na main. PRs para a develop rodam só o CI (validação).
 
 trigger:
   branches:
