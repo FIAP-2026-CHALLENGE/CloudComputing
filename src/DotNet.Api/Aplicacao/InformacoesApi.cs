@@ -8,7 +8,7 @@ public static class InformacoesApi
 {
     public const string Nome = "CLYVO VET API";
 
-    public const string Versao = "1.1.0";
+    public const string Versao = "1.2.0";
 
     public const string Descricao =
         "Monitoramento e cuidado de cães e gatos: responsáveis, animais e eventos de cuidado, " +
